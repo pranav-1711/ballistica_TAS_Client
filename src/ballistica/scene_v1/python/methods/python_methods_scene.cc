@@ -1585,6 +1585,91 @@ static PyMethodDef PySeekReplayDef = {
     "Rewind or fast-forward replay.",
 };
 
+// -------------------------- seek_game --------------------------------------
+
+static auto PySeekGame(PyObject* self, PyObject* args) -> PyObject* {
+  BA_PYTHON_TRY;
+  auto* appmode = classic::ClassicAppMode::GetActiveOrThrow();
+
+  HostActivity* host_activity =
+      ContextRefSceneV1::FromCurrent().GetHostActivity();
+  float delta;
+  if (!PyArg_ParseTuple(args, "f", &delta)) {
+    return nullptr;
+  }
+  // session->SeekTo(session->base_time()
+  //                 + static_cast<millisecs_t>(delta * 1'000));
+  host_activity->SetGameSpeed(delta);
+  Py_RETURN_NONE;
+  BA_PYTHON_CATCH;
+}
+
+static PyMethodDef PySeekGameDef = {
+    "seek_game",  // name
+    PySeekGame,   // method
+    METH_VARARGS,   // flags
+
+    "seek_game(delta: float) -> None\n"
+    "\n"
+    "(internal)\n"
+    "\n"
+    "Rewind or fast-forward game.",
+};
+
+// -------------------------- pause_game --------------------------------------
+
+static auto PyPauseGame(PyObject* self, PyObject* args) -> PyObject* {
+  BA_PYTHON_TRY;
+  auto* appmode = classic::ClassicAppMode::GetActiveOrThrow();
+
+  HostActivity* host_activity =
+      ContextRefSceneV1::FromCurrent().GetHostActivity();
+
+  host_activity->SetPaused(true);
+
+  Py_RETURN_NONE;
+  BA_PYTHON_CATCH;
+}
+
+static PyMethodDef PyPauseGameDef = {
+    "pause_game",  // name
+    PyPauseGame,   // method
+    METH_VARARGS,   // flags
+
+    "pause_game() -> None\n"
+    "\n"
+    "(internal)\n"
+    "\n"
+    "Pause the current game.",
+};
+
+// -------------------------- resume_game --------------------------------------
+
+static auto PyResumeGame(PyObject* self, PyObject* args) -> PyObject* {
+  BA_PYTHON_TRY;
+  auto* appmode = classic::ClassicAppMode::GetActiveOrThrow();
+
+  HostActivity* host_activity =
+      ContextRefSceneV1::FromCurrent().GetHostActivity();
+
+  host_activity->SetPaused(false);
+
+  Py_RETURN_NONE;
+  BA_PYTHON_CATCH;
+}
+
+static PyMethodDef PyResumeGameDef = {
+    "resume_game",  // name
+    PyResumeGame,   // method
+    METH_VARARGS,   // flags
+
+    "resume_game() -> None\n"
+    "\n"
+    "(internal)\n"
+    "\n"
+    "Resume the paused game.",
+};
+
 // ----------------------- reset_random_player_names ---------------------------
 
 static auto PyResetRandomPlayerNames(PyObject* self, PyObject* args,
@@ -1757,6 +1842,9 @@ auto PythonMethodsScene::GetMethods() -> std::vector<PyMethodDef> {
       PyGetReplaySpeedExponentDef,
       PyIsReplayPausedDef,
       PySeekReplayDef,
+      PySeekGameDef,
+      PyPauseGameDef,
+      PyResumeGameDef,
       PyPauseReplayDef,
       PyResumeReplayDef,
       PySetDebugSpeedExponentDef,
