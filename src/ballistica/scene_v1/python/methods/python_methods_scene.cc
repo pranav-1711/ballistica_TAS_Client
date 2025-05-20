@@ -1605,11 +1605,11 @@ static auto PySeekGame(PyObject* self, PyObject* args) -> PyObject* {
 }
 
 static PyMethodDef PySeekGameDef = {
-    "seek_game",  // name
+    "change_game_speed",  // name
     PySeekGame,   // method
     METH_VARARGS,   // flags
 
-    "seek_game(delta: float) -> None\n"
+    "change_game_speed(delta: float) -> None\n"
     "\n"
     "(internal)\n"
     "\n"
