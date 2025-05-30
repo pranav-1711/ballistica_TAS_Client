@@ -1,8 +1,10 @@
-### 1.7.41 (build 22381, api 9, 2025-05-23)
+### 1.7.42 (build 22387, api 9, 2025-05-30)
+
+### 1.7.41 (build 22382, api 9, 2025-05-25)
 - Fixed a few unsafe accesses of cJSON objects that could be exploited to crash
   servers by feeding them bad json data. If you ever come across CXX code
-  accessing a cJSON obj like `obj->valuestring` without calling
-  `cJSON_IsString(obj)` first, please holler loudly at me.
+  accessing a cJSON obj like `obj->valuestring` without making sure
+  `cJSON_IsString(obj)` is true first, please holler loudly at me.
 
 ### 1.7.40 (build 22379, api 9, 2025-05-23)
 - Upgraded from Python 3.12 to 3.13. See python.org for what fun new goodies
@@ -22,11 +24,11 @@
   At some point in the future I may make the same change for the Android
   version, though the custom statically linked build is a bit easier to maintain
   there so its less of a priority.
-- Fixed an issue on Android where in some cases viewing an Ad to reduce chest
+- Fixed an issue on Android where in some cases viewing an ad to reduce chest
   open time would have no effect. Please holler if you ever watch an ad and
   don't see the resulting time reduction.
 - Querying exported classes via the meta subsystem now accepts fully qualified
-  path strings such as `babase.Plugin` instead of type objects. This is because
+  path strings such as 'babase.Plugin' instead of type objects. This is because
   I have disabled the class-name prettifying that was happening before
   (`set_canonical_module_names()`), so the *actual* class paths we'd pull from
   passed type objects now could be something ugly/internal like
@@ -45,7 +47,7 @@
   America' and 'Spanish - Spain'.
 - Split the Portuguese translation into two different ones: 'Portuguese -
   Brazil' and 'Portuguese - Portugal'.
-- Android should not be smarter about selecting translations - for example, if
+- Android should now be smarter about selecting translations - for example, if
   your first choice language is not available but your second choice is, it
   should now show your second choice instead of falling back to English.
 
