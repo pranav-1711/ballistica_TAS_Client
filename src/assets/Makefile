@@ -367,7 +367,6 @@ SCRIPT_TARGETS_PY_PUBLIC = \
   $(BUILD_DIR)/ba_data/python/bauiv1lib/coop/tournamentbutton.py \
   $(BUILD_DIR)/ba_data/python/bauiv1lib/credits.py \
   $(BUILD_DIR)/ba_data/python/bauiv1lib/discord.py \
-  $(BUILD_DIR)/ba_data/python/bauiv1lib/feedback.py \
   $(BUILD_DIR)/ba_data/python/bauiv1lib/fileselector.py \
   $(BUILD_DIR)/ba_data/python/bauiv1lib/gather/__init__.py \
   $(BUILD_DIR)/ba_data/python/bauiv1lib/gather/abouttab.py \
@@ -653,7 +652,6 @@ SCRIPT_TARGETS_PYC_PUBLIC = \
   $(BUILD_DIR)/ba_data/python/bauiv1lib/coop/__pycache__/tournamentbutton.cpython-313.opt-1.pyc \
   $(BUILD_DIR)/ba_data/python/bauiv1lib/__pycache__/credits.cpython-313.opt-1.pyc \
   $(BUILD_DIR)/ba_data/python/bauiv1lib/__pycache__/discord.cpython-313.opt-1.pyc \
-  $(BUILD_DIR)/ba_data/python/bauiv1lib/__pycache__/feedback.cpython-313.opt-1.pyc \
   $(BUILD_DIR)/ba_data/python/bauiv1lib/__pycache__/fileselector.cpython-313.opt-1.pyc \
   $(BUILD_DIR)/ba_data/python/bauiv1lib/gather/__pycache__/__init__.cpython-313.opt-1.pyc \
   $(BUILD_DIR)/ba_data/python/bauiv1lib/gather/__pycache__/abouttab.cpython-313.opt-1.pyc \
@@ -8062,12 +8060,17 @@ clean:
 
 # Modern AssetPackage bits.
 
-# Extract the asset-package version from project-config and stuff it into
-# a 'resolved' file. If we are using dev version, clear the file which
-# will force an explicit check each time through.
+# Extract the asset-package version from project-config and stuff it into a
+# 'resolved' file. If we are using dev version, instead clears the file which
+# forces an explicit check each time through.
 $(PROJ_DIR)/.cache/asset_package_resolved: $(PROJ_DIR)/config/projectconfig.json
 	@$(PCOMMAND) asset_package_resolve $@
 
+# We maintain a manifest file for each variant of the bundled asset package.
+# This depends on the asset_package_resolved file which causes us to run a
+# cloud assemble whenever the resolved package value changes. If we're
+# targeting a dev version there will be no asset_package_resolved file which
+# means we'll ask the cloud for any updates each time through.
 $(PROJ_DIR)/.cache/assetmanifests/gui_desktop_v2dev1:	\
       $(PROJ_DIR)/.cache/asset_package_resolved
 	@$(PCOMMAND) asset_package_assemble \
