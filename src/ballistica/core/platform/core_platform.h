@@ -11,14 +11,14 @@
 #include <string>
 #include <vector>
 
-#include "ballistica/shared/foundation/types.h"
+#include "ballistica/shared/ballistica.h"
 
 namespace ballistica::core {
 
 /// Low level platform-specific functionality is contained here, to be
 /// implemented by platform-specific subclasses.
 ///
-/// TODO(ericf): Most of the stuff below should be migrated into
+/// TODO(ericf): Much of the stuff below should be migrated into
 ///   BasePlatform or other higher-level places. Core should contain only
 ///   what is directly needed to bootstrap Python and the engine
 ///   environment.
@@ -79,8 +79,11 @@ class CorePlatform {
 #pragma mark PRINTING/LOGGING --------------------------------------------------
 
   /// Display a message to any default log for the platform (android log,
-  /// etc.) Note that this can be called from any thread. Default
-  /// implementation does nothing.
+  /// etc.) This can be called from any thread. The default implementation does
+  /// nothing. Implementations should not print to stdout or stderr, as mapping
+  /// those to log messages is handled at a higher level. Implementations should
+  /// not use any Python functionality, as this may be called before Python is
+  /// spun up or after it is finalized.
   virtual void EmitPlatformLog(const std::string& name, LogLevel level,
                                const std::string& msg);
 
@@ -96,22 +99,25 @@ class CorePlatform {
   /// etc).
   virtual auto GetDefaultUIScale() -> UIScale;
 
-  /// Return default DataDirectory value for monolithic builds.
+  /// Return default data-directory value for monolithic builds. This will be
+  /// passed to pyenv as a starting point, and whatever pyenv gives us back
+  /// will be our actual value.
   auto GetDataDirectoryMonolithicDefault() -> std::string;
 
+  /// Return default config-directory value for monolithic builds. This will be
+  /// passed to pyenv as a starting point, and whatever pyenv gives us back
+  /// will be our actual value.
   auto GetConfigDirectoryMonolithicDefault() -> std::optional<std::string>;
 
-  /// Get the path of the app config file.
-  auto GetConfigFilePath() -> std::string;
-
+  /// Return default user-python (mods) directory value for monolithic
+  /// builds. This will be passed to pyenv as a starting point, and whatever
+  /// pyenv gives us back will be our actual value.
   auto GetUserPythonDirectoryMonolithicDefault() -> std::optional<std::string>;
 
-  /// Get a directory where the app can store internal generated data. This
-  /// directory should not be included in backups and the app should remain
-  /// functional if this directory is completely cleared between runs
-  /// (though it is expected that things stay intact here *while* the app is
-  /// running).
-  auto GetVolatileDataDirectory() -> std::string;
+  /// Return default cache-directory value for monolithic builds. This will
+  /// be passed to pyenv as a starting point, and whatever pyenv gives us
+  /// back will be our actual value.
+  auto GetCacheDirectoryMonolithicDefault() -> std::optional<std::string>;
 
   /// Return the directory where game replay files live.
   auto GetReplaysDir() -> std::string;
@@ -446,21 +452,26 @@ class CorePlatform {
   virtual auto DoGetUserPythonDirectoryMonolithicDefault()
       -> std::optional<std::string>;
 
-  /// Return the default config directory for this platform. This will be
-  /// used as the config dir if not overridden via command line options,
+  /// Return the default config directory for this platform on monolithic
+  /// builds. This will be used if not overridden via command line options,
   /// etc.
   virtual auto DoGetConfigDirectoryMonolithicDefault()
       -> std::optional<std::string>;
 
-  /// Return the default data directory for this platform. This will be used
-  /// as the data dir if not overridden by core-config, etc. This is the one
-  /// monolithic-default value that is not optional.
+  /// Return the default cache directory for this platform on monolithic
+  /// builds. This will be used if not overridden via command line options,
+  /// etc.
+  virtual auto DoGetCacheDirectoryMonolithicDefault()
+      -> std::optional<std::string>;
+
+  /// Return the default data directory for this platform on monolithic
+  /// builds. This will be used if not overridden by command line options,
+  /// etc. This is the one monolithic-default value that is not optional.
   virtual auto DoGetDataDirectoryMonolithicDefault() -> std::string;
 
-  /// Return the default Volatile data dir for this platform. This will be
-  /// used as the volatile-data-dir if not overridden via command line
-  /// options/etc.
-  virtual auto GetDefaultVolatileDataDirectory() -> std::string;
+  /// Return the default cache dir for this platform. This will be
+  /// used if not overridden via command line options/etc.
+  // virtual auto GetDefaultCacheDirectory() -> std::string;
 
   /// Generate a random UUID string.
   virtual auto GenerateUUID() -> std::string;
@@ -475,14 +486,14 @@ class CorePlatform {
   bool have_has_touchscreen_value_{};
   bool have_touchscreen_{};
   bool is_tegra_k1_{};
-  bool made_volatile_data_dir_{};
+  bool made_cache_dir_{};
   bool have_device_uuid_{};
   bool ran_base_post_init_{};
   millisecs_t start_time_millisecs_{};
   std::string device_name_;
   std::string device_description_;
   std::string legacy_device_uuid_;
-  std::string volatile_data_dir_;
+  std::string cache_dir_;
   std::string replays_dir_;
 
   // Temp; should be able to remove this once Swift 5.10 is out.

@@ -10,6 +10,7 @@
 #include "ballistica/base/networking/network_reader.h"
 #include "ballistica/base/python/base_python.h"
 #include "ballistica/classic/support/classic_app_mode.h"
+#include "ballistica/core/logging/logging_macros.h"
 #include "ballistica/core/python/core_python.h"
 #include "ballistica/scene_v1/connection/connection_set.h"
 #include "ballistica/scene_v1/connection/connection_to_client.h"
@@ -18,7 +19,7 @@
 #include "ballistica/shared/math/vector3f.h"
 #include "ballistica/shared/networking/sockaddr.h"
 #include "ballistica/shared/python/python.h"
-#include "ballistica/shared/python/python_sys.h"
+#include "ballistica/shared/python/python_macros.h"
 
 namespace ballistica::scene_v1 {
 
@@ -328,7 +329,7 @@ static auto PySetAdmins(PyObject* self, PyObject* args, PyObject* keywds)
   }
   auto* appmode = classic::ClassicAppMode::GetActiveOrThrow();
 
-  auto admins = g_base->python->GetPyLStrings(admins_obj);
+  auto admins = Python::GetStrings(admins_obj);
   std::set<std::string> adminset;
   for (auto&& admin : admins) {
     adminset.insert(admin);
@@ -422,8 +423,9 @@ static auto PyConnectToParty(PyObject* self, PyObject* args, PyObject* keywds)
       throw Exception();
     }
   } catch (const std::exception&) {
-    ScreenMessage(g_base->assets->GetResourceString("invalidAddressErrorText"),
-                  {1, 0, 0});
+    g_base->ScreenMessage(
+        g_base->assets->GetResourceString("invalidAddressErrorText"),
+        {1, 0, 0});
     Py_RETURN_NONE;
   }
   appmode->connections()->PushHostConnectedUDPCall(

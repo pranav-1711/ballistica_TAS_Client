@@ -8,7 +8,6 @@ import logging
 from functools import partial
 from typing import TYPE_CHECKING, override
 
-# from bacommon.app import AppExperience
 import bacommon.bs
 import babase
 import bauiv1
@@ -173,9 +172,10 @@ class ClassicAppMode(babase.AppMode):
     @override
     def on_app_active_changed(self) -> None:
         if not babase.app.active:
-            # If we've gone inactive, bring up the main menu, which has the
-            # side effect of pausing the action (when possible).
-            babase.invoke_main_menu()
+            # If we're going inactive, ask for the main ui, which should
+            # have the side effect of pausing the action if we're in a
+            # game.
+            babase.request_main_ui()
 
             # Also store any league vis state for the active account.
             # this may be our last chance to do this on mobile.
@@ -554,7 +554,7 @@ class ClassicAppMode(babase.AppMode):
         self._update_ui_live_state()
 
     def _root_ui_menu_press(self) -> None:
-        from babase import push_back_press
+        from babase import menu_press
 
         ui = babase.app.ui_v1
 
@@ -562,15 +562,16 @@ class ClassicAppMode(babase.AppMode):
         old_window = ui.get_main_window()
         if old_window is not None:
 
+            bauiv1.getsound('swish').play()
+
             classic = babase.app.classic
             assert classic is not None
             classic.resume()
 
             ui.clear_main_window()
-            return
-
-        # Otherwise
-        push_back_press()
+        else:
+            # Otherwise act like a standard menu button.
+            menu_press()
 
     def _root_ui_account_press(self) -> None:
         from bauiv1lib.account.settings import AccountSettingsWindow

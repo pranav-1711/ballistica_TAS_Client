@@ -3,9 +3,10 @@
 """Utility functionality related to the overall operation of the app."""
 from __future__ import annotations
 
-import gc
 import os
-from threading import Thread
+import time
+import asyncio
+import threading
 from functools import partial
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, override
@@ -203,39 +204,6 @@ def handle_leftover_v1_cloud_log_file() -> None:
         balog.exception('Error handling leftover log file.')
 
 
-def garbage_collect_session_end() -> None:
-    """Run explicit garbage collection with extra checks for session end."""
-    gc.collect()
-
-    # Can be handy to print this to check for leaks between games.
-    if bool(False):
-        print('PY OBJ COUNT', len(gc.get_objects()))
-    if gc.garbage:
-        print('PYTHON GC FOUND', len(gc.garbage), 'UNCOLLECTIBLE OBJECTS:')
-        for i, obj in enumerate(gc.garbage):
-            print(str(i) + ':', obj)
-
-    # NOTE: no longer running these checks. Perhaps we can allow
-    # running them with an explicit flag passed, but we should never
-    # run them by default because gc.get_objects() can mess up the app.
-    # See notes at top of efro.debug.
-
-    # if bool(False):
-    #     print_live_object_warnings('after session shutdown')
-
-
-def garbage_collect() -> None:
-    """Run an explicit pass of garbage collection.
-
-    May also print warnings/etc. if collection takes too long or if
-    uncollectible objects are found (so use this instead of simply
-    :meth:`gc.collect()`.
-
-    :meta private:
-    """
-    gc.collect()
-
-
 def print_corrupt_file_error() -> None:
     """Print an error if a corrupt file is found."""
 
@@ -401,10 +369,22 @@ class AppHealthSubsystem(AppSubsystem):
         assert _babase.in_logic_thread()
         super().__init__()
         self._running = True
-        self._thread = Thread(target=self._app_monitor_thread_main, daemon=True)
-        self._thread.start()
         self._response = False
         self._first_check = True
+
+        self.stop_event = threading.Event()
+        self.stopped_event = threading.Event()
+
+        self._thread = threading.Thread(target=self._app_monitor_thread_main)
+        self._thread.start()
+
+        # Kill our thread as part of app shutdown.
+        _babase.app.add_shutdown_task(self._shutdown())
+
+    async def _shutdown(self) -> None:
+        self.stop_event.set()
+        while not self.stopped_event.is_set():
+            await asyncio.sleep(0.05)
 
     @override
     def on_app_loading(self) -> None:
@@ -441,15 +421,15 @@ class AppHealthSubsystem(AppSubsystem):
         return self._running
 
     def _monitor_app(self) -> None:
-        import time
 
-        while bool(True):
-            # Always sleep a bit between checks.
-            time.sleep(1.234)
+        while not self.stop_event.is_set():
+
+            # # Always sleep a bit between checks.
+            self.stop_event.wait(1.234)
 
             # Do nothing while backgrounded.
             while not self._running:
-                time.sleep(2.3456)
+                self.stop_event.wait(2.3456)
 
             # Wait for the logic thread to run something we send it.
             starttime = time.monotonic()
@@ -479,6 +459,8 @@ class AppHealthSubsystem(AppSubsystem):
                     # We just do one alert for now.
                     return
 
-                time.sleep(1.042)
+                self.stop_event.wait(1.042)
 
             self._first_check = False
+
+        self.stopped_event.set()

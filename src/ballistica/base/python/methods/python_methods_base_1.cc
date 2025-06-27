@@ -17,12 +17,12 @@
 #include "ballistica/base/python/support/python_context_call_runnable.h"
 #include "ballistica/base/ui/dev_console.h"
 #include "ballistica/base/ui/ui.h"
+#include "ballistica/core/logging/logging.h"
 #include "ballistica/core/platform/core_platform.h"
 #include "ballistica/shared/foundation/event_loop.h"
-#include "ballistica/shared/foundation/logging.h"
 #include "ballistica/shared/python/python.h"
 #include "ballistica/shared/python/python_command.h"
-#include "ballistica/shared/python/python_sys.h"
+#include "ballistica/shared/python/python_macros.h"
 
 namespace ballistica::base {
 
@@ -44,11 +44,13 @@ static auto PyDiscordStart(PyObject* self, PyObject* args, PyObject* keywds)
   BA_PYTHON_CATCH;
 }
 
-static PyMethodDef PyDiscordStartDef = {"discord_start",               // name
-                                        (PyCFunction)PyDiscordStart,   // method
-                                        METH_VARARGS | METH_KEYWORDS,  // flags
-                                        "discord_start() -> None\n"
-                                        "\n"};
+static PyMethodDef PyDiscordStartDef = {
+    "discord_start",               // name
+    (PyCFunction)PyDiscordStart,   // method
+    METH_VARARGS | METH_KEYWORDS,  // flags
+    "discord_start() -> None\n"
+    "\n"
+    "start the discord sdk and connect the client."};
 
 // -------------------------- discord_is_ready------------------------------
 
@@ -85,19 +87,19 @@ static auto PyDiscordRichpresence(PyObject* self, PyObject* args,
              *large_image_text = nullptr, *small_image_key = nullptr,
              *small_image_text = nullptr;
   int64_t start_timestamp = 0, end_timestamp = 0;
-  static char* kwlist[] = {const_cast<char*>("state"),
-                           const_cast<char*>("details"),
-                           const_cast<char*>("large_image_key"),
-                           const_cast<char*>("large_image_text"),
-                           const_cast<char*>("small_image_key"),
-                           const_cast<char*>("start_timestamp"),
-                           const_cast<char*>("small_image_text"),
-                           const_cast<char*>("end_timestamp"),
-                           nullptr};
+  static const char* kwlist[] = {const_cast<char*>("state"),
+                                 const_cast<char*>("details"),
+                                 const_cast<char*>("large_image_key"),
+                                 const_cast<char*>("large_image_text"),
+                                 const_cast<char*>("small_image_key"),
+                                 const_cast<char*>("small_image_text"),
+                                 const_cast<char*>("start_timestamp"),
+                                 const_cast<char*>("end_timestamp"),
+                                 nullptr};
   if (!PyArg_ParseTupleAndKeywords(
-          args, keywds, "|ssssssLL", kwlist, &state, &details, &large_image_key,
-          &large_image_text, &small_image_key, &small_image_text,
-          &start_timestamp, &end_timestamp)) {
+          args, keywds, "|ssssssLL", const_cast<char**>(kwlist), &state,
+          &details, &large_image_key, &large_image_text, &small_image_key,
+          &small_image_text, &start_timestamp, &end_timestamp)) {
     return nullptr;
   }
 #if BA_ENABLE_DISCORD
@@ -115,27 +117,34 @@ static PyMethodDef PyDiscordRichpresenceDef = {
     "discord_richpresence",              // name
     (PyCFunction)PyDiscordRichpresence,  // method
     METH_VARARGS | METH_KEYWORDS,        // flags
-    "discord_richpresence() -> None\n"
+    "discord_richpresence(state: str | None = None,"
+    "details: str | None = None,"
+    "large_image_key: str | None = None,"
+    "large_image_text: str | None = None,"
+    "small_image_key: str | None = None,"
+    "small_image_text: str | None = None,"
+    "start_timestamp: str | None = None,"
+    "end_timestamp: str | None = None,) -> None\n"
     "\n"
     "Set Discord Rich Presence information."
     "\n"
     "Args:"
     "\n"
-    "state: The user's current status"
+    "   state: The user's current status"
     "\n"
-    "details: What the user is currently doing"
+    "   details: What the user is currently doing"
     "\n"
-    "large_image_key: Key for the large image"
+    "   large_image_key: Key for the large image"
     "\n"
-    "large_image_text: Text displayed when hovering over the large image"
+    "   large_image_text: Text displayed when hovering over the large image"
     "\n"
-    "small_image_key: Key for the small image"
+    "   small_image_key: Key for the small image"
     "\n"
-    "small_image_text: Text displayed when hovering over the small image"
+    "   small_image_text: Text displayed when hovering over the small image"
     "\n"
-    "start_timestamp: Unix timestamp for game start time"
+    "   start_timestamp: Unix timestamp for game start time"
     "\n"
-    "end_timestamp: Unix timestamp for game end time"};
+    "   end_timestamp: Unix timestamp for game end time"};
 
 // -------------------------- discord_set_party ------------------------------
 
@@ -164,17 +173,19 @@ static PyMethodDef PyDiscordSetPartyDef = {
     "discord_set_party",             // name
     (PyCFunction)PyDiscordSetParty,  // method
     METH_VARARGS | METH_KEYWORDS,    // flags
-    "discord_set_party() -> None\n"
+    "discord_set_party(party_id: str | None = None,"
+    "current_party_size: int | None = None, "
+    "max_party_size: int | None = None) -> None\n"
     "\n"
     "Set Discord Party information."
     "\n"
     "Args:"
     "\n"
-    "party_id: Unique identifier for the party"
+    "   party_id: Unique identifier for the party"
     "\n"
-    "current_party_size: Current number of members in the party"
+    "   current_party_size: Current number of members in the party"
     "\n"
-    "max_party_size: Maximum number of members allowed in the party"};
+    "   max_party_size: Maximum number of members allowed in the party"};
 
 // -------------------------- discord_add_button ------------------------------
 
@@ -200,15 +211,15 @@ static PyMethodDef PyDiscordAddButtonDef = {
     "discord_add_button",             // name
     (PyCFunction)PyDiscordAddButton,  // method
     METH_VARARGS | METH_KEYWORDS,     // flags
-    "discord_add_button() -> None\n"
+    "discord_add_button(label: str, url: str) -> None\n"
     "\n"
     "Add Discord rich presence button."
     "\n"
     "Args:"
     "\n"
-    "label: Label for the button"
+    "   label: Label for the button"
     "\n"
-    "url: URL to open when the button is clicked"};
+    "   url: URL to open when the button is clicked"};
 
 // -------------------------- discord_join_lobby ------------------------------
 
@@ -233,13 +244,13 @@ static PyMethodDef PyDiscordJoinLobbyDef = {
     "discord_join_lobby",             // name
     (PyCFunction)PyDiscordJoinLobby,  // method
     METH_VARARGS | METH_KEYWORDS,     // flags
-    "discord_join_lobby() -> None\n"
+    "discord_join_lobby(lobby_secret: str) -> None\n"
     "\n"
     "Join a discord lobby."
     "\n"
     "Args:"
     "\n"
-    "lobby_secret: Unique identifier for the lobby"};
+    "   lobby_secret: Unique identifier for the lobby"};
 
 // -------------------------- discord_leave_lobby ------------------------------
 
@@ -286,10 +297,33 @@ static PyMethodDef PyDiscordSendLobbyMessageDef = {
     "discord_send_lobby_message",            // name
     (PyCFunction)PyDiscordSendLobbyMessage,  // method
     METH_VARARGS | METH_KEYWORDS,            // flags
-    "discord_send_lobby_message() -> None\n"
+    "discord_send_lobby_message(message: str) -> None\n"
     "\n"
     "Args:"
-    "message: Message to send to a discord lobby."};
+    "\n"
+    "       message: Message to send to a discord lobby."};
+
+// -------------------------- discord_shutdown ------------------------------
+
+static auto PyDiscordShutdown(PyObject* self, PyObject* args, PyObject* keywds)
+    -> PyObject* {
+  BA_PYTHON_TRY;
+#if BA_ENABLE_DISCORD
+  if (g_base->discord->client_is_ready) {
+    g_base->discord->Shutdown();
+  }
+#endif
+  Py_RETURN_NONE;
+  BA_PYTHON_CATCH;
+}
+
+static PyMethodDef PyDiscordShutdownDef = {
+    "discord_shutdown",              // name
+    (PyCFunction)PyDiscordShutdown,  // method
+    METH_VARARGS | METH_KEYWORDS,    // flags
+    "discord_shutdown() -> None\n"
+    "\n"
+    "Shutdown and disconnect the Discord client."};
 
 // --------------------------------- appname -----------------------------------
 
@@ -512,12 +546,13 @@ static auto PyPushCall(PyObject* self, PyObject* args, PyObject* keywds)
     // Warn the user not to use this from the logic thread since it doesnt
     // save/restore context.
     if (!suppress_warning && g_base->InLogicThread()) {
-      g_core->Log(LogName::kBa, LogLevel::kWarning,
-                  "babase.pushcall() called from the logic thread with "
-                  "from_other_thread set to true (call "
-                      + Python::ObjToString(call_obj) + " at "
-                      + Python::GetPythonFileLocation()
-                      + "). That arg should only be used from other threads.");
+      g_core->logging->Log(
+          LogName::kBa, LogLevel::kWarning,
+          "babase.pushcall() called from the logic thread with "
+          "from_other_thread set to true (call "
+              + Python::ObjToString(call_obj) + " at "
+              + Python::GetPythonFileLocation()
+              + "). That arg should only be used from other threads.");
     }
 
     assert(Python::HaveGIL());
@@ -564,7 +599,7 @@ static PyMethodDef PyPushCallDef = {
     "\n"
     "Push a call to the logic-thread's event loop.\n"
     "\n"
-    "This function expects to be called from the logic thread, and will "
+    "This function expects to be called from the logic thread, and will\n"
     "automatically save and restore the context to behave seamlessly.\n"
     "\n"
     "To push a call from outside of the logic thread, pass\n"
@@ -801,31 +836,31 @@ static PyMethodDef PyQuitDef = {
     "See docs for :class:`~babase.QuitType` for explanations of the optional\n"
     "``quit_type`` arg."};
 
-// ----------------------------- apply_config ----------------------------------
+// ---------------------------- apply_app_config -------------------------------
 
-static auto PyDoApplyAppConfig(PyObject* self, PyObject* args) -> PyObject* {
+static auto PyApplyAppConfig(PyObject* self, PyObject* args) -> PyObject* {
   BA_PYTHON_TRY;
 
   BA_PRECONDITION(g_base->InLogicThread());
-  g_base->logic->DoApplyAppConfig();
+  g_base->logic->ApplyAppConfig();
 
   Py_RETURN_NONE;
   BA_PYTHON_CATCH;
 }
 
-static PyMethodDef PyDoApplyAppConfigDef = {
-    "do_apply_app_config",  // name
-    PyDoApplyAppConfig,     // method
-    METH_VARARGS,           // flags
+static PyMethodDef PyApplyAppConfigDef = {
+    "apply_app_config",  // name
+    PyApplyAppConfig,    // method
+    METH_VARARGS,        // flags
 
-    "do_apply_app_config() -> None\n"
+    "apply_app_config() -> None\n"
     "\n"
     ":meta private:",
 };
 
-// ----------------------------- commit_config ---------------------------------
+// --------------------------- commit_app_config -------------------------------
 
-static auto PyCommitConfig(PyObject* self, PyObject* args, PyObject* keywds)
+static auto PyCommitAppConfig(PyObject* self, PyObject* args, PyObject* keywds)
     -> PyObject* {
   BA_PYTHON_TRY;
   PyObject* config_obj;
@@ -834,13 +869,13 @@ static auto PyCommitConfig(PyObject* self, PyObject* args, PyObject* keywds)
                                    const_cast<char**>(kwlist), &config_obj)) {
     return nullptr;
   }
-  if (config_obj == nullptr || !g_base->python->IsPyLString(config_obj)) {
+  if (config_obj == nullptr || !Python::IsString(config_obj)) {
     throw Exception("ERROR ON JSON DUMP");
   }
-  std::string final_str = g_base->python->GetPyLString(config_obj);
-  std::string path = g_core->platform->GetConfigFilePath();
+  std::string final_str = Python::GetString(config_obj);
+  std::string path = g_core->GetConfigFilePath();
   std::string path_temp = path + ".tmp";
-  std::string path_prev = path + ".prev";
+  std::string path_prev = g_core->GetBackupConfigFilePath();
   if (explicit_bool(true)) {
     FILE* f_out = g_core->platform->FOpen(path_temp.c_str(), "wb");
     if (f_out == nullptr) {
@@ -857,7 +892,7 @@ static auto PyCommitConfig(PyObject* self, PyObject* args, PyObject* keywds)
     }
     fclose(f_out);
 
-    // Now move any existing config to .prev.
+    // Now move any existing config to prev path.
     if (g_core->platform->FilePathExists(path)) {
       // On windows, rename doesn't overwrite existing files.. need to kill
       // the old explicitly.
@@ -889,12 +924,12 @@ static auto PyCommitConfig(PyObject* self, PyObject* args, PyObject* keywds)
   BA_PYTHON_CATCH;
 }
 
-static PyMethodDef PyCommitConfigDef = {
-    "commit_config",               // name
-    (PyCFunction)PyCommitConfig,   // method
-    METH_VARARGS | METH_KEYWORDS,  // flags
+static PyMethodDef PyCommitAppConfigDef = {
+    "commit_app_config",             // name
+    (PyCFunction)PyCommitAppConfig,  // method
+    METH_VARARGS | METH_KEYWORDS,    // flags
 
-    "commit_config(config: str) -> None\n"
+    "commit_app_config(config: str) -> None\n"
     "\n"
     ":meta private:",
 };
@@ -977,7 +1012,7 @@ static auto PyEnv(PyObject* self) -> PyObject* {
         "ss"  // data_directory
         "}",
         "build_number", kEngineBuildNumber,
-        "config_file_path", g_core->platform->GetConfigFilePath().c_str(),
+        "config_file_path", g_core->GetConfigFilePath().c_str(),
         "ba_locale", g_core->platform->GetBaLocale().c_str(),
         "locale", g_core->platform->GetLocaleTag().c_str(),
         "legacy_user_agent_string", g_core->legacy_user_agent_string().c_str(),
@@ -1055,7 +1090,7 @@ static auto PyEmitLog(PyObject* self, PyObject* args, PyObject* keywds)
     fprintf(stderr, "Invalid log level to emit_log(): %s\n", levelstr);
     level = LogLevel::kInfo;
   }
-  Logging::EmitLog(name, level, timestamp, message);
+  g_core->logging->EmitLog(name, level, timestamp, message);
 
   Py_RETURN_NONE;
   BA_PYTHON_CATCH;
@@ -1089,7 +1124,7 @@ static auto PyV1CloudLog(PyObject* self, PyObject* args, PyObject* keywds)
                                    const_cast<char**>(kwlist), &message)) {
     return nullptr;
   }
-  Logging::V1CloudLog(message);
+  g_core->logging->V1CloudLog(message);
 
   Py_RETURN_NONE;
   BA_PYTHON_CATCH;
@@ -1336,7 +1371,7 @@ static auto PyMacMusicAppPlayPlaylist(PyObject* self, PyObject* args,
                                    const_cast<char**>(kwlist), &playlist_obj)) {
     return nullptr;
   }
-  playlist = g_base->python->GetPyLString(playlist_obj);
+  playlist = Python::GetString(playlist_obj);
   if (g_core->platform->MacMusicAppPlayPlaylist(playlist)) {
     Py_RETURN_TRUE;
   } else {
@@ -1859,34 +1894,6 @@ static PyMethodDef PyGraphicsShutdownIsCompleteDef = {
     ":meta private:\n",
 };
 
-// --------------------------- invoke_main_menu --------------------------------
-
-static auto PyInvokeMainMenu(PyObject* self) -> PyObject* {
-  BA_PYTHON_TRY;
-
-  BA_PRECONDITION(g_base->InLogicThread());
-  if (!g_base->ui->MainMenuVisible()) {
-    g_base->ui->PushMainMenuPressCall(nullptr);
-  }
-  Py_RETURN_NONE;
-
-  BA_PYTHON_CATCH;
-}
-
-static PyMethodDef PyInvokeMainMenuDef = {
-    "invoke_main_menu",             // name
-    (PyCFunction)PyInvokeMainMenu,  // method
-    METH_NOARGS,                    // flags
-
-    "invoke_main_menu() -> None\n"
-    "\n"
-    "High level call to bring up the main menu if it is not present.\n"
-    "\n"
-    "This is essentially the same as pressing the menu button on a\n"
-    "controller.\n"
-    "\n"
-    ":meta private:",
-};
 // -----------------------------------------------------------------------------
 
 auto PythonMethodsBase1::GetMethods() -> std::vector<PyMethodDef> {
@@ -1900,6 +1907,7 @@ auto PythonMethodsBase1::GetMethods() -> std::vector<PyMethodDef> {
       PyDiscordJoinLobbyDef,
       PyDiscordLeaveLobbyDef,
       PyDiscordSendLobbyMessageDef,
+      PyDiscordShutdownDef,
       PyAppNameDef,
       PyAppIsActiveDef,
       PyRunAppDef,
@@ -1909,8 +1917,8 @@ auto PythonMethodsBase1::GetMethods() -> std::vector<PyMethodDef> {
       PyV1CloudLogDef,
       PyEnvDef,
       PyPreEnvDef,
-      PyCommitConfigDef,
-      PyDoApplyAppConfigDef,
+      PyCommitAppConfigDef,
+      PyApplyAppConfigDef,
       PyQuitDef,
       PyAppTimerDef,
       PyAppTimeDef,
@@ -1953,7 +1961,6 @@ auto PythonMethodsBase1::GetMethods() -> std::vector<PyMethodDef> {
       PyAudioShutdownIsCompleteDef,
       PyGraphicsShutdownBeginDef,
       PyGraphicsShutdownIsCompleteDef,
-      PyInvokeMainMenuDef,
   };
 }
 

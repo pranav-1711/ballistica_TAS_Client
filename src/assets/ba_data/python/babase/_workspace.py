@@ -54,8 +54,7 @@ class WorkspaceSubsystem:
                 workspaceid=workspaceid,
                 workspacename=workspacename,
                 on_completed=on_completed,
-            ),
-            daemon=True,
+            )
         ).start()
 
     def _errmsg(self, msg: babase.Lstr) -> None:
@@ -73,6 +72,7 @@ class WorkspaceSubsystem:
         workspacename: str,
         on_completed: Callable[[], None],
     ) -> None:
+        # pylint: disable=too-many-locals
         from babase._language import Lstr
 
         class _SkipSyncError(RuntimeError):
@@ -83,7 +83,7 @@ class WorkspaceSubsystem:
 
         set_path = True
         wspath = Path(
-            _babase.app.env.volatile_data_directory, 'workspaces', workspaceid
+            _babase.app.env.cache_directory, 'workspaces', workspaceid
         )
         try:
             # If it seems we're offline, don't even attempt a sync, but
@@ -99,6 +99,16 @@ class WorkspaceSubsystem:
             state = bacommon.cloud.WorkspaceFetchState(manifest=manifest)
 
             while True:
+
+                # Abort if the app is shutting down.
+                appstate = _babase.app.state
+                appstate_t = type(appstate)
+                if (
+                    appstate is appstate_t.SHUTTING_DOWN
+                    or appstate is appstate_t.SHUTDOWN_COMPLETE
+                ):
+                    break
+
                 with account:
                     response = plus.cloud.send_message(
                         bacommon.cloud.WorkspaceFetchMessage(

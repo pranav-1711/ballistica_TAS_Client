@@ -10,7 +10,7 @@
 #include "ballistica/core/support/base_soft.h"
 #include "ballistica/shared/math/vector2f.h"
 #include "ballistica/shared/python/python.h"
-#include "ballistica/shared/python/python_sys.h"
+#include "ballistica/shared/python/python_macros.h"
 
 namespace ballistica {
 
@@ -31,7 +31,7 @@ static void ClearPythonExceptionAndWarnIfUnset() {
   // avoid that situation because it opens up the possibility of us clearing
   // exceptions that aren't related to our nullptr.
   if (!PyErr_Occurred()) {
-    g_core->Log(
+    g_core->logging->Log(
         LogName::kBa, LogLevel::kWarning,
         "A PythonRef acquire/steal call was passed nullptr but no Python "
         "exception is set. This situation should be avoided; only pass "

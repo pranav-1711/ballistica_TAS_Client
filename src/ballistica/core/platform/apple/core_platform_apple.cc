@@ -1,5 +1,6 @@
 // Released under the MIT License. See LICENSE for details.
 
+#include "ballistica/shared/foundation/exception.h"
 #if BA_PLATFORM_MACOS || BA_PLATFORM_IOS_TVOS
 #include "ballistica/core/platform/apple/core_platform_apple.h"
 
@@ -165,6 +166,15 @@ auto CorePlatformApple::DoGetConfigDirectoryMonolithicDefault()
          + "/BallisticaKit";
 #else
   return CorePlatform::DoGetConfigDirectoryMonolithicDefault();
+#endif
+}
+
+auto CorePlatformApple::DoGetCacheDirectoryMonolithicDefault()
+    -> std::optional<std::string> {
+#if BA_XCODE_BUILD
+  return BallisticaKit::FromCpp::getCacheDirectoryPath();
+#else
+  return CorePlatform::DoGetCacheDirectoryMonolithicDefault();
 #endif
 }
 

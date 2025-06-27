@@ -82,7 +82,7 @@ auto PythonClassContextCall::tp_new(PyTypeObject* type, PyObject* args,
     throw Exception(
         std::string(type_obj.tp_name)
         + " objects must only be created in the logic thread (current is ("
-        + CurrentThreadName() + ").");
+        + g_core->CurrentThreadName() + ").");
   }
   self->context_call_ = new Object::Ref<PythonContextCall>(
       Object::New<PythonContextCall>(source_obj));

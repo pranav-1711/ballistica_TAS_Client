@@ -730,19 +730,20 @@ class LocaleResolved(Enum):
             if not extras or any(
                 val in extras
                 for val in [
-                    '419',
-                    'mx',
-                    'ar',
-                    'co',
-                    'cl',
-                    'pe',
-                    've',
-                    'cr',
-                    'pr',
-                    'do',
-                    'uy',
-                    'ec',
-                    'pa',
+                    '419',  # Latin America / Carribean region
+                    'mx',  # Mexico
+                    'ar',  # Argentina
+                    'co',  # Colombia
+                    'cl',  # Chile
+                    'pe',  # Peru
+                    've',  # Venezuela
+                    'cr',  # Costa Rica
+                    'pr',  # Puerto Rico
+                    'do',  # Dominican Republic
+                    'uy',  # Uruguay
+                    'ec',  # Ecuador
+                    'pa',  # Panama
+                    'bo',  # Bolivia
                 ]
             ):
                 return cls.SPANISH_LATIN_AMERICA
@@ -759,6 +760,10 @@ class LocaleResolved(Enum):
                 fallback.name,
             )
             return fallback
+        if lang == 'c':
+            # The C.UTF-8 is a minimal locale defined by POSIX we
+            # sometimes run into.
+            return cls.ENGLISH
         if lang == 'ar':
             return cls.ARABIC
         if lang == 'be':

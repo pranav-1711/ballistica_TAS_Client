@@ -5,17 +5,19 @@
 #if BA_PLATFORM_ANDROID
 #include "ballistica/base/app_adapter/app_adapter_android.h"
 #endif
-#include "ballistica/base/app_adapter/app_adapter_apple.h"
-#include "ballistica/base/app_adapter/app_adapter_headless.h"
+#include "ballistica/base/app_adapter/app_adapter_apple.h"  // IWYU pragma: keep.
+#include "ballistica/base/app_adapter/app_adapter_headless.h"  // IWYU pragma: keep.
 #include "ballistica/base/app_adapter/app_adapter_sdl.h"
-#include "ballistica/base/app_adapter/app_adapter_vr.h"
+#include "ballistica/base/app_adapter/app_adapter_vr.h"  // IWYU pragma: keep.
 #include "ballistica/base/graphics/graphics.h"
-#include "ballistica/base/graphics/graphics_vr.h"
+#include "ballistica/base/graphics/graphics_vr.h"  // IWYU pragma: keep.
+#include "ballistica/core/core.h"                  // IWYU pragma: keep.
 
 // ------------------------- PLATFORM SELECTION --------------------------------
 
-// This ugly chunk of macros simply pulls in the correct platform class header
-// for each platform and defines the actual class g_base->platform will be.
+// This ugly chunk of macros simply pulls in the correct platform class
+// header for each platform and defines the actual class that
+// g_base->platform will be.
 
 // Android ---------------------------------------------------------------------
 

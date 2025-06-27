@@ -29,11 +29,14 @@
 #endif
 
 #include "ballistica/core/core.h"
-#include "ballistica/core/platform/support/min_sdl.h"  // IWYU pragma: keep.
+#include "ballistica/core/logging/logging.h"
+#include "ballistica/core/logging/logging_macros.h"
+#include "ballistica/core/platform/support/min_sdl.h"
 #include "ballistica/core/support/base_soft.h"
+#include "ballistica/shared/foundation/exception.h"
 #include "ballistica/shared/generic/native_stack_trace.h"
 #include "ballistica/shared/generic/utils.h"
-#include "ballistica/shared/networking/networking_sys.h"  // IWYU pragma: keep.
+#include "ballistica/shared/networking/networking_sys.h"
 
 // ------------------------- PLATFORM SELECTION --------------------------------
 
@@ -180,12 +183,13 @@ auto CorePlatform::GetLegacyDeviceUUID() -> const std::string& {
         if (FILE* f2 = FOpen(path.c_str(), "wb")) {
           size_t result = fwrite(val.c_str(), val.size(), 1, f2);
           if (result != 1)
-            g_core->Log(LogName::kBa, LogLevel::kError,
-                        "unable to write bsuuid file.");
+            g_core->logging->Log(LogName::kBa, LogLevel::kError,
+                                 "unable to write bsuuid file.");
           fclose(f2);
         } else {
-          g_core->Log(LogName::kBa, LogLevel::kError,
-                      "unable to open bsuuid file for writing: '" + path + "'");
+          g_core->logging->Log(
+              LogName::kBa, LogLevel::kError,
+              "unable to open bsuuid file for writing: '" + path + "'");
         }
       }
     }
@@ -195,8 +199,8 @@ auto CorePlatform::GetLegacyDeviceUUID() -> const std::string& {
 }
 
 auto CorePlatform::GetDeviceV1AccountUUIDPrefix() -> std::string {
-  g_core->Log(LogName::kBa, LogLevel::kError,
-              "GetDeviceV1AccountUUIDPrefix() unimplemented");
+  g_core->logging->Log(LogName::kBa, LogLevel::kError,
+                       "GetDeviceV1AccountUUIDPrefix() unimplemented");
   return "u";
 }
 
@@ -219,8 +223,11 @@ auto CorePlatform::DoGetConfigDirectoryMonolithicDefault()
   return {};
 }
 
-auto CorePlatform::GetConfigFilePath() -> std::string {
-  return g_core->GetConfigDirectory() + BA_DIRSLASH + "config.json";
+auto CorePlatform::DoGetCacheDirectoryMonolithicDefault()
+    -> std::optional<std::string> {
+  std::string config_dir;
+  // Go with unset here; let baenv handle it in Python-land.
+  return {};
 }
 
 // FIXME: should make this unnecessary.
@@ -252,28 +259,28 @@ void CorePlatform::SetLowLevelConfigValue(const char* key, int value) {
   if (f) {
     size_t result = fwrite(out.c_str(), out.size(), 1, f);
     if (result != 1)
-      g_core->Log(LogName::kBa, LogLevel::kError,
-                  "unable to write low level config file.");
+      g_core->logging->Log(LogName::kBa, LogLevel::kError,
+                           "unable to write low level config file.");
     fclose(f);
   } else {
-    g_core->Log(LogName::kBa, LogLevel::kError,
-                "unable to open low level config file for writing.");
+    g_core->logging->Log(LogName::kBa, LogLevel::kError,
+                         "unable to open low level config file for writing.");
   }
 }
 
-auto CorePlatform::GetVolatileDataDirectory() -> std::string {
-  if (!made_volatile_data_dir_) {
-    volatile_data_dir_ = GetDefaultVolatileDataDirectory();
-    MakeDir(volatile_data_dir_);
-    made_volatile_data_dir_ = true;
-  }
-  return volatile_data_dir_;
-}
+// auto CorePlatform::GetCacheDirectory() -> std::string {
+//   if (!made_cache_dir_) {
+//     cache_dir_ = GetDefaultCacheDirectory();
+//     MakeDir(cache_dir_);
+//     made_cache_dir_ = true;
+//   }
+//   return cache_dir_;
+// }
 
-auto CorePlatform::GetDefaultVolatileDataDirectory() -> std::string {
-  // By default, stuff this in a subdir under our config dir.
-  return g_core->GetConfigDirectory() + BA_DIRSLASH + "vdata";
-}
+// auto CorePlatform::GetDefaultCacheDirectory() -> std::string {
+//   // By default, stuff this in a subdir under our config dir.
+//   return g_core->GetConfigDirectory() + BA_DIRSLASH + "cache";
+// }
 
 auto CorePlatform::GetReplaysDir() -> std::string {
   static bool made_dir = false;
@@ -365,15 +372,27 @@ auto CorePlatform::GetErrnoString() -> std::string {
 
 auto CorePlatform::GetConfigDirectoryMonolithicDefault()
     -> std::optional<std::string> {
-  // CoreConfig value trumps all. Otherwise go with platform-specific default.
+  // CoreConfig value trumps all. Otherwise go with platform-specific
+  // default.
   if (g_core->core_config().config_dir.has_value()) {
     return *g_core->core_config().config_dir;
   }
   return DoGetConfigDirectoryMonolithicDefault();
 }
 
+auto CorePlatform::GetCacheDirectoryMonolithicDefault()
+    -> std::optional<std::string> {
+  // CoreConfig value trumps all. Otherwise go with platform-specific
+  // default.
+  if (g_core->core_config().cache_dir.has_value()) {
+    return *g_core->core_config().cache_dir;
+  }
+  return DoGetCacheDirectoryMonolithicDefault();
+}
+
 auto CorePlatform::GetDataDirectoryMonolithicDefault() -> std::string {
-  // CoreConfig arg trumps all. Otherwise ask for platform-specific value.
+  // CoreConfig value trumps all. Otherwise ask for platform-specific
+  // default.
   if (g_core->core_config().data_dir.has_value()) {
     return *g_core->core_config().data_dir;
   }
@@ -558,7 +577,7 @@ void CorePlatform::BlockingFatalErrorDialog(const std::string& message) {
 }
 
 auto CorePlatform::DoGetDataDirectoryMonolithicDefault() -> std::string {
-  // By default, assume we're in it.
+  // By default, look for ba_data and whatnot where we are now.
   return ".";
 }
 
@@ -700,8 +719,8 @@ auto CorePlatform::ConvertIncomingLeaderboardScore(
 
 void CorePlatform::SubmitScore(const std::string& game,
                                const std::string& version, int64_t score) {
-  g_core->Log(LogName::kBa, LogLevel::kError,
-              "FIXME: SubmitScore() unimplemented");
+  g_core->logging->Log(LogName::kBa, LogLevel::kError,
+                       "FIXME: SubmitScore() unimplemented");
 }
 
 void CorePlatform::ReportAchievement(const std::string& achievement) {}
@@ -714,8 +733,8 @@ auto CorePlatform::HaveLeaderboard(const std::string& game,
 void CorePlatform::ShowGameServiceUI(const std::string& show,
                                      const std::string& game,
                                      const std::string& game_version) {
-  g_core->Log(LogName::kBa, LogLevel::kError,
-              "FIXME: ShowGameServiceUI() unimplemented");
+  g_core->logging->Log(LogName::kBa, LogLevel::kError,
+                       "FIXME: ShowGameServiceUI() unimplemented");
 }
 
 void CorePlatform::AndroidSetResString(const std::string& res) {
@@ -758,30 +777,30 @@ auto CorePlatform::DemangleCXXSymbol(const std::string& s) -> std::string {
 }
 
 void CorePlatform::ResetAchievements() {
-  g_core->Log(LogName::kBa, LogLevel::kError,
-              "ResetAchievements() unimplemented");
+  g_core->logging->Log(LogName::kBa, LogLevel::kError,
+                       "ResetAchievements() unimplemented");
 }
 
 void CorePlatform::RunEvents() {}
 
 void CorePlatform::MusicPlayerPlay(PyObject* target) {
-  g_core->Log(LogName::kBa, LogLevel::kError,
-              "MusicPlayerPlay() unimplemented on this platform");
+  g_core->logging->Log(LogName::kBa, LogLevel::kError,
+                       "MusicPlayerPlay() unimplemented on this platform");
 }
 
 void CorePlatform::MusicPlayerStop() {
-  g_core->Log(LogName::kBa, LogLevel::kError,
-              "MusicPlayerStop() unimplemented on this platform");
+  g_core->logging->Log(LogName::kBa, LogLevel::kError,
+                       "MusicPlayerStop() unimplemented on this platform");
 }
 
 void CorePlatform::MusicPlayerShutdown() {
-  g_core->Log(LogName::kBa, LogLevel::kError,
-              "MusicPlayerShutdown() unimplemented on this platform");
+  g_core->logging->Log(LogName::kBa, LogLevel::kError,
+                       "MusicPlayerShutdown() unimplemented on this platform");
 }
 
 void CorePlatform::MusicPlayerSetVolume(float volume) {
-  g_core->Log(LogName::kBa, LogLevel::kError,
-              "MusicPlayerSetVolume() unimplemented on this platform");
+  g_core->logging->Log(LogName::kBa, LogLevel::kError,
+                       "MusicPlayerSetVolume() unimplemented on this platform");
 }
 
 auto CorePlatform::IsOSPlayingMusic() -> bool { return false; }
@@ -803,7 +822,8 @@ void CorePlatform::SubmitAnalyticsCounts() {}
 void CorePlatform::SetPlatformMiscReadVals(const std::string& vals) {}
 
 void CorePlatform::ShowAd(const std::string& purpose) {
-  g_core->Log(LogName::kBa, LogLevel::kError, "ShowAd() unimplemented");
+  g_core->logging->Log(LogName::kBa, LogLevel::kError,
+                       "ShowAd() unimplemented");
 }
 
 auto CorePlatform::GetHasAds() -> bool { return false; }
@@ -814,7 +834,8 @@ auto CorePlatform::GetHasVideoAds() -> bool {
 }
 
 void CorePlatform::SignInV1(const std::string& account_type) {
-  g_core->Log(LogName::kBa, LogLevel::kError, "SignInV1() unimplemented");
+  g_core->logging->Log(LogName::kBa, LogLevel::kError,
+                       "SignInV1() unimplemented");
 }
 
 void CorePlatform::V1LoginDidChange() {
@@ -822,39 +843,40 @@ void CorePlatform::V1LoginDidChange() {
 }
 
 void CorePlatform::SignOutV1() {
-  g_core->Log(LogName::kBa, LogLevel::kError, "SignOutV1() unimplemented");
+  g_core->logging->Log(LogName::kBa, LogLevel::kError,
+                       "SignOutV1() unimplemented");
 }
 
 void CorePlatform::MacMusicAppInit() {
-  g_core->Log(LogName::kBa, LogLevel::kError,
-              "MacMusicAppInit() unimplemented");
+  g_core->logging->Log(LogName::kBa, LogLevel::kError,
+                       "MacMusicAppInit() unimplemented");
 }
 
 auto CorePlatform::MacMusicAppGetVolume() -> int {
-  g_core->Log(LogName::kBa, LogLevel::kError,
-              "MacMusicAppGetVolume() unimplemented");
+  g_core->logging->Log(LogName::kBa, LogLevel::kError,
+                       "MacMusicAppGetVolume() unimplemented");
   return 0;
 }
 
 void CorePlatform::MacMusicAppSetVolume(int volume) {
-  g_core->Log(LogName::kBa, LogLevel::kError,
-              "MacMusicAppSetVolume() unimplemented");
+  g_core->logging->Log(LogName::kBa, LogLevel::kError,
+                       "MacMusicAppSetVolume() unimplemented");
 }
 
 void CorePlatform::MacMusicAppStop() {
-  g_core->Log(LogName::kBa, LogLevel::kError,
-              "MacMusicAppStop() unimplemented");
+  g_core->logging->Log(LogName::kBa, LogLevel::kError,
+                       "MacMusicAppStop() unimplemented");
 }
 
 auto CorePlatform::MacMusicAppPlayPlaylist(const std::string& playlist)
     -> bool {
-  g_core->Log(LogName::kBa, LogLevel::kError,
-              "MacMusicAppPlayPlaylist() unimplemented");
+  g_core->logging->Log(LogName::kBa, LogLevel::kError,
+                       "MacMusicAppPlayPlaylist() unimplemented");
   return false;
 }
 auto CorePlatform::MacMusicAppGetPlaylists() -> std::list<std::string> {
-  g_core->Log(LogName::kBa, LogLevel::kError,
-              "MacMusicAppGetPlaylists() unimplemented");
+  g_core->logging->Log(LogName::kBa, LogLevel::kError,
+                       "MacMusicAppGetPlaylists() unimplemented");
   return {};
 }
 
@@ -959,9 +981,9 @@ auto CorePlatform::SetSocketNonBlocking(int sd) -> bool {
 #else
   int result = fcntl(sd, F_SETFL, O_NONBLOCK);
   if (result != 0) {
-    g_core->Log(LogName::kBa, LogLevel::kError,
-                "Error setting non-blocking socket: "
-                    + g_core->platform->GetSocketErrorString());
+    g_core->logging->Log(LogName::kBa, LogLevel::kError,
+                         "Error setting non-blocking socket: "
+                             + g_core->platform->GetSocketErrorString());
     return false;
   }
   return true;

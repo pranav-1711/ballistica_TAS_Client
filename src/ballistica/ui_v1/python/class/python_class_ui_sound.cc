@@ -26,8 +26,7 @@ void PythonClassUISound::SetupType(PyTypeObject* cls) {
   cls->tp_methods = tp_methods;
 }
 
-auto PythonClassUISound::Create(const Object::Ref<base::SoundAsset>& sound)
-    -> PyObject* {
+auto PythonClassUISound::Create(base::SoundAsset* sound) -> PyObject* {
   assert(TypeIsSetUp(&type_obj));
   auto* py_sound = reinterpret_cast<PythonClassUISound*>(
       PyObject_CallObject(reinterpret_cast<PyObject*>(&type_obj), nullptr));
@@ -58,7 +57,7 @@ auto PythonClassUISound::tp_new(PyTypeObject* type, PyObject* args,
     throw Exception(
         "ERROR: " + std::string(type_obj.tp_name)
         + " objects must only be created in the logic thread (current is ("
-        + CurrentThreadName() + ").");
+        + g_core->CurrentThreadName() + ").");
   }
   self->sound_ = new Object::Ref<base::SoundAsset>();
   return reinterpret_cast<PyObject*>(self);

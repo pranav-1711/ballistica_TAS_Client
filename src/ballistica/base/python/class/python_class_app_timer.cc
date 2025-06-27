@@ -8,7 +8,7 @@
 #include "ballistica/base/python/base_python.h"
 #include "ballistica/base/python/support/python_context_call_runnable.h"
 #include "ballistica/shared/foundation/event_loop.h"
-#include "ballistica/shared/python/python_sys.h"
+#include "ballistica/shared/python/python_macros.h"
 
 namespace ballistica::base {
 
@@ -77,7 +77,7 @@ auto PythonClassAppTimer::tp_new(PyTypeObject* type, PyObject* args,
     throw Exception(
         "ERROR: " + std::string(type_obj.tp_name)
         + " objects must only be created in the logic thread (current is ("
-        + CurrentThreadName() + ").");
+        + g_core->CurrentThreadName() + ").");
   }
 
   double length;

@@ -23,6 +23,8 @@
 #include "ballistica/base/logic/logic.h"
 #include "ballistica/base/python/base_python.h"
 #include "ballistica/base/ui/ui.h"
+#include "ballistica/core/logging/logging.h"
+#include "ballistica/core/logging/logging_macros.h"
 #include "ballistica/core/platform/core_platform.h"
 #include "ballistica/shared/foundation/event_loop.h"
 #include "ballistica/shared/generic/json.h"
@@ -320,7 +322,7 @@ void Assets::PrintLoadInfo() {
   snprintf(buffer, sizeof(buffer), "    %-50s %10s %10s", "FILE",
            "PRELOAD_TIME", "LOAD_TIME");
   s += buffer;
-  g_core->Log(LogName::kBaAssets, LogLevel::kInfo, s);
+  g_core->logging->Log(LogName::kBaAssets, LogLevel::kInfo, s);
   millisecs_t total_preload_time = 0;
   millisecs_t total_load_time = 0;
   assert(asset_lists_locked_);
@@ -333,7 +335,7 @@ void Assets::PrintLoadInfo() {
              i.second->GetName().c_str(),
              static_cast_check_fit<int>(preload_time),
              static_cast_check_fit<int>(load_time));
-    g_core->Log(LogName::kBaAssets, LogLevel::kInfo, buffer);
+    g_core->logging->Log(LogName::kBaAssets, LogLevel::kInfo, buffer);
     num++;
   }
   assert(asset_lists_locked_);
@@ -346,7 +348,7 @@ void Assets::PrintLoadInfo() {
              i.second->GetName().c_str(),
              static_cast_check_fit<int>(preload_time),
              static_cast_check_fit<int>(load_time));
-    g_core->Log(LogName::kBaAssets, LogLevel::kInfo, buffer);
+    g_core->logging->Log(LogName::kBaAssets, LogLevel::kInfo, buffer);
     num++;
   }
   assert(asset_lists_locked_);
@@ -359,7 +361,7 @@ void Assets::PrintLoadInfo() {
              i.second->GetName().c_str(),
              static_cast_check_fit<int>(preload_time),
              static_cast_check_fit<int>(load_time));
-    g_core->Log(LogName::kBaAssets, LogLevel::kInfo, buffer);
+    g_core->logging->Log(LogName::kBaAssets, LogLevel::kInfo, buffer);
     num++;
   }
   assert(asset_lists_locked_);
@@ -372,7 +374,7 @@ void Assets::PrintLoadInfo() {
              i.second->GetName().c_str(),
              static_cast_check_fit<int>(preload_time),
              static_cast_check_fit<int>(load_time));
-    g_core->Log(LogName::kBaAssets, LogLevel::kInfo, buffer);
+    g_core->logging->Log(LogName::kBaAssets, LogLevel::kInfo, buffer);
     num++;
   }
   assert(asset_lists_locked_);
@@ -385,7 +387,7 @@ void Assets::PrintLoadInfo() {
              i.second->file_name_full().c_str(),
              static_cast_check_fit<int>(preload_time),
              static_cast_check_fit<int>(load_time));
-    g_core->Log(LogName::kBaAssets, LogLevel::kInfo, buffer);
+    g_core->logging->Log(LogName::kBaAssets, LogLevel::kInfo, buffer);
     num++;
   }
   snprintf(buffer, sizeof(buffer),
@@ -393,7 +395,7 @@ void Assets::PrintLoadInfo() {
            "(feeding data to OpenGL, etc): %i",
            static_cast<int>(total_preload_time),
            static_cast<int>(total_load_time));
-  g_core->Log(LogName::kBaAssets, LogLevel::kInfo, buffer);
+  g_core->logging->Log(LogName::kBaAssets, LogLevel::kInfo, buffer);
 }
 
 void Assets::MarkAllAssetsForLoad() {
@@ -1045,37 +1047,41 @@ void Assets::Prune(int level) {
   if (kShowPruningInfo) {
     assert(asset_lists_locked_);
     if (textures_.size() != old_texture_count) {
-      g_core->Log(LogName::kBaAssets, LogLevel::kInfo,
-                  "Textures pruned from " + std::to_string(old_texture_count)
-                      + " to " + std::to_string(textures_.size()));
+      g_core->logging->Log(LogName::kBaAssets, LogLevel::kInfo,
+                           "Textures pruned from "
+                               + std::to_string(old_texture_count) + " to "
+                               + std::to_string(textures_.size()));
     }
     if (text_textures_.size() != old_text_texture_count) {
-      g_core->Log(LogName::kBaAssets, LogLevel::kInfo,
-                  "TextTextures pruned from "
-                      + std::to_string(old_text_texture_count) + " to "
-                      + std::to_string(text_textures_.size()));
+      g_core->logging->Log(LogName::kBaAssets, LogLevel::kInfo,
+                           "TextTextures pruned from "
+                               + std::to_string(old_text_texture_count) + " to "
+                               + std::to_string(text_textures_.size()));
     }
     if (qr_textures_.size() != old_qr_texture_count) {
-      g_core->Log(LogName::kBaAssets, LogLevel::kInfo,
-                  "QrTextures pruned from "
-                      + std::to_string(old_qr_texture_count) + " to "
-                      + std::to_string(qr_textures_.size()));
+      g_core->logging->Log(LogName::kBaAssets, LogLevel::kInfo,
+                           "QrTextures pruned from "
+                               + std::to_string(old_qr_texture_count) + " to "
+                               + std::to_string(qr_textures_.size()));
     }
     if (meshes_.size() != old_mesh_count) {
-      g_core->Log(LogName::kBaAssets, LogLevel::kInfo,
-                  "Meshes pruned from " + std::to_string(old_mesh_count)
-                      + " to " + std::to_string(meshes_.size()));
+      g_core->logging->Log(LogName::kBaAssets, LogLevel::kInfo,
+                           "Meshes pruned from "
+                               + std::to_string(old_mesh_count) + " to "
+                               + std::to_string(meshes_.size()));
     }
     if (collision_meshes_.size() != old_collision_mesh_count) {
-      g_core->Log(LogName::kBaAssets, LogLevel::kInfo,
-                  "CollisionMeshes pruned from "
-                      + std::to_string(old_collision_mesh_count) + " to "
-                      + std::to_string(collision_meshes_.size()));
+      g_core->logging->Log(LogName::kBaAssets, LogLevel::kInfo,
+                           "CollisionMeshes pruned from "
+                               + std::to_string(old_collision_mesh_count)
+                               + " to "
+                               + std::to_string(collision_meshes_.size()));
     }
     if (sounds_.size() != old_sound_count) {
-      g_core->Log(LogName::kBaAssets, LogLevel::kInfo,
-                  "Sounds pruned from " + std::to_string(old_sound_count)
-                      + " to " + std::to_string(sounds_.size()));
+      g_core->logging->Log(LogName::kBaAssets, LogLevel::kInfo,
+                           "Sounds pruned from "
+                               + std::to_string(old_sound_count) + " to "
+                               + std::to_string(sounds_.size()));
     }
   }
 }
@@ -1182,12 +1188,12 @@ auto Assets::FindAssetFile(FileType type, const std::string& name)
 
   // We wanna fail gracefully for some types.
   if (type == FileType::kSound && name != "blank") {
-    g_core->Log(LogName::kBaAssets, LogLevel::kError,
-                "Unable to load audio: '" + name + "'.");
+    g_core->logging->Log(LogName::kBaAssets, LogLevel::kError,
+                         "Unable to load audio: '" + name + "'.");
     return FindAssetFile(type, "blank");
   } else if (type == FileType::kTexture && name != "white") {
-    g_core->Log(LogName::kBaAssets, LogLevel::kError,
-                "Unable to load texture: '" + name + "'.");
+    g_core->logging->Log(LogName::kBaAssets, LogLevel::kError,
+                         "Unable to load texture: '" + name + "'.");
     return FindAssetFile(type, "white");
   }
 
@@ -1246,8 +1252,8 @@ void Assets::AddPackage(const std::string& name, const std::string& path) {
   assert(g_base->InLogicThread());
   if (g_buildconfig.debug_build()) {
     if (packages_.find(name) != packages_.end()) {
-      g_core->Log(LogName::kBaAssets, LogLevel::kWarning,
-                  "adding duplicate package: '" + name + "'");
+      g_core->logging->Log(LogName::kBaAssets, LogLevel::kWarning,
+                           "adding duplicate package: '" + name + "'");
     }
   }
   packages_[name] = path;
@@ -1395,43 +1401,19 @@ auto DoCompileResourceString(cJSON* obj) -> std::string {
 
   // If its got a "r" key, look it up as a resource.. (with optional fallback).
   cJSON* resource = cJSON_GetObjectItem(obj, "r");
-  if (resource == nullptr) {
-    resource = cJSON_GetObjectItem(obj, "resource");
-    // As of build 14318, complain if we find long key names; hope to remove
-    // them soon.
-    if (resource != nullptr) {
-      static bool printed = false;
-      if (!printed) {
-        printed = true;
-        char* c = cJSON_Print(obj);
-        BA_LOG_ONCE(
-            LogName::kBaAssets, LogLevel::kError,
-            "found long key 'resource' in raw lstr json: " + std::string(c));
-        free(c);
-      }
-    }
-  }
   if (resource != nullptr) {
+    if (!cJSON_IsString(resource)) {
+      throw Exception("expected a string for resource");
+    }
     // Look for fallback-resource.
     cJSON* fallback_resource = cJSON_GetObjectItem(obj, "f");
-    if (fallback_resource == nullptr) {
-      fallback_resource = cJSON_GetObjectItem(obj, "fallback");
-
-      // As of build 14318, complain if we find old long key names; hope to
-      // remove them soon.
-      if (fallback_resource != nullptr) {
-        static bool printed = false;
-        if (!printed) {
-          printed = true;
-          char* c = cJSON_Print(obj);
-          BA_LOG_ONCE(
-              LogName::kBaAssets, LogLevel::kError,
-              "found long key 'fallback' in raw lstr json: " + std::string(c));
-          free(c);
-        }
-      }
-    }
     cJSON* fallback_value = cJSON_GetObjectItem(obj, "fv");
+    if (fallback_resource && !cJSON_IsString(fallback_resource)) {
+      throw Exception("expected a string for fallback_resource");
+    }
+    if (fallback_value && !cJSON_IsString(fallback_value)) {
+      throw Exception("expected a string for fallback_value");
+    }
     result = g_base->python->GetResource(
         resource->valuestring,
         fallback_resource ? fallback_resource->valuestring : nullptr,
@@ -1439,23 +1421,6 @@ auto DoCompileResourceString(cJSON* obj) -> std::string {
   } else {
     // Apparently not a resource; lets try as a translation ("t" keys).
     cJSON* translate = cJSON_GetObjectItem(obj, "t");
-    if (translate == nullptr) {
-      translate = cJSON_GetObjectItem(obj, "translate");
-
-      // As of build 14318, complain if we find long key names; hope to remove
-      // them soon.
-      if (translate != nullptr) {
-        static bool printed = false;
-        if (!printed) {
-          printed = true;
-          char* c = cJSON_Print(obj);
-          BA_LOG_ONCE(
-              LogName::kBaAssets, LogLevel::kError,
-              "found long key 'translate' in raw lstr json: " + std::string(c));
-          free(c);
-        }
-      }
-    }
     if (translate != nullptr) {
       if (!cJSON_IsArray(translate) || cJSON_GetArraySize(translate) != 2) {
         throw Exception("Expected a 2 member array for translate");
@@ -1477,23 +1442,6 @@ auto DoCompileResourceString(cJSON* obj) -> std::string {
       // (can be useful for feeding explicit strings while still allowing
       // translated subs
       cJSON* value = cJSON_GetObjectItem(obj, "v");
-      if (value == nullptr) {
-        value = cJSON_GetObjectItem(obj, "value");
-
-        // As of build 14318, complain if we find long key names; hope to remove
-        // them soon.
-        if (value != nullptr) {
-          static bool printed = false;
-          if (!printed) {
-            printed = true;
-            char* c = cJSON_Print(obj);
-            BA_LOG_ONCE(
-                LogName::kBaAssets, LogLevel::kError,
-                "found long key 'value' in raw lstr json: " + std::string(c));
-            free(c);
-          }
-        }
-      }
       if (value != nullptr) {
         if (!cJSON_IsString(value)) {
           throw Exception("Expected a string for value");
@@ -1506,26 +1454,8 @@ auto DoCompileResourceString(cJSON* obj) -> std::string {
   }
 
   // Ok; now no matter what it was, see if it contains any subs and replace
-  // them.
-  // ("subs" or "s")
+  // them ("s").
   cJSON* subs = cJSON_GetObjectItem(obj, "s");
-  if (subs == nullptr) {
-    subs = cJSON_GetObjectItem(obj, "subs");
-
-    // As of build 14318, complain if we find long key names; hope to remove
-    // them soon.
-    if (subs != nullptr) {
-      static bool printed = false;
-      if (!printed) {
-        printed = true;
-        char* c = cJSON_Print(obj);
-        BA_LOG_ONCE(
-            LogName::kBaAssets, LogLevel::kError,
-            "found long key 'subs' in raw lstr json: " + std::string(c));
-        free(c);
-      }
-    }
-  }
   if (subs != nullptr) {
     if (!cJSON_IsArray(subs)) {
       throw Exception("expected an array for 'subs'");
@@ -1545,7 +1475,8 @@ auto DoCompileResourceString(cJSON* obj) -> std::string {
       }
       std::string s_key = key->valuestring;
 
-      // Second item can be a string or a dict; if its a dict, we go recursive.
+      // Second item can be a string or a dict; if its a dict, we go
+      // recursive.
       cJSON* value = cJSON_GetArrayItem(sub, 1);
       std::string s_val;
       if (cJSON_IsString(value)) {
@@ -1557,8 +1488,10 @@ auto DoCompileResourceString(cJSON* obj) -> std::string {
       }
 
       // Replace *ALL* occurrences.
+      //
       // FIXME: Using this simple logic, If our replace value contains our
-      // search value we get an infinite loop. For now, just error in that case.
+      // search value we get an infinite loop. For now, just error in that
+      // case.
       if (s_val.find(s_key) != std::string::npos) {
         throw Exception("Subs replace string cannot contain search string.");
       }
@@ -1589,9 +1522,15 @@ auto Assets::CompileResourceString(const std::string& s, bool* valid)
   }
 
   cJSON* root = cJSON_Parse(s.c_str());
+  if (root && !cJSON_IsObject(root)) {
+    cJSON_Delete(root);
+    root = nullptr;
+  }
+
   if (root == nullptr) {
-    g_core->Log(LogName::kBaAssets, LogLevel::kError,
-                "CompileResourceString failed; invalid json: '" + s + "'");
+    g_core->logging->Log(
+        LogName::kBaAssets, LogLevel::kError,
+        "CompileResourceString failed; invalid json: '" + s + "'");
     *valid = false;
     return "";
   }
@@ -1600,9 +1539,9 @@ auto Assets::CompileResourceString(const std::string& s, bool* valid)
     result = DoCompileResourceString(root);
     *valid = true;
   } catch (const std::exception& e) {
-    g_core->Log(LogName::kBaAssets, LogLevel::kError,
-                "CompileResourceString failed: " + std::string(e.what())
-                    + "; str='" + s + "'");
+    g_core->logging->Log(LogName::kBaAssets, LogLevel::kError,
+                         "CompileResourceString failed: "
+                             + std::string(e.what()) + "; str='" + s + "'");
     result = "<error>";
     *valid = false;
   }

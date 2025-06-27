@@ -7,10 +7,12 @@ from __future__ import annotations
 import time
 import copy
 import weakref
+from dataclasses import dataclass
 from threading import Thread
 from typing import TYPE_CHECKING, override
 
 from efro.error import CleanError
+from efro.util import cleanup_exception_chain
 from bauiv1lib.settings.testing import TestingWindow
 import bauiv1 as bui
 
@@ -155,10 +157,7 @@ class NetTestingWindow(bui.MainWindow):
         # Pass a weak-ref to this window so we don't keep it alive
         # if we back out before it completes. Also set is as daemon
         # so it doesn't keep the app running if the user is trying to quit.
-        Thread(
-            daemon=True,
-            target=bui.Call(_run_diagnostics, weakref.ref(self)),
-        ).start()
+        Thread(target=bui.Call(_run_diagnostics, weakref.ref(self))).start()
 
     @override
     def get_main_window_state(self) -> bui.MainWindowState:
@@ -207,6 +206,7 @@ class NetTestingWindow(bui.MainWindow):
 def _run_diagnostics(weakwin: weakref.ref[NetTestingWindow]) -> None:
     # pylint: disable=too-many-statements
     # pylint: disable=too-many-branches
+    # pylint: disable=too-many-locals
 
     from efro.util import utc_now
 
@@ -244,6 +244,10 @@ def _run_diagnostics(weakwin: weakref.ref[NetTestingWindow]) -> None:
             _print(msg, color=(1.0, 1.0, 0.3))
             _print(f'Failed in {duration:.2f}s.', color=(1, 0, 0))
             have_error[0] = True
+
+            # Try to avoid reference cycles.
+            cleanup_exception_chain(exc)
+
             return False
 
     try:
@@ -336,7 +340,7 @@ def _run_diagnostics(weakwin: weakref.ref[NetTestingWindow]) -> None:
                 '\nDiagnostics complete. Everything looks good!',
                 color=(0, 1, 0),
             )
-    except Exception:
+    except Exception as exc:
         import traceback
 
         _print(
@@ -345,6 +349,8 @@ def _run_diagnostics(weakwin: weakref.ref[NetTestingWindow]) -> None:
             f'{traceback.format_exc()}',
             color=(1, 0, 0),
         )
+        # Try to avoid reference cycles.
+        cleanup_exception_chain(exc)
 
 
 def _dummy_success() -> None:
@@ -403,17 +409,17 @@ def _test_v1_transaction() -> None:
         raise RuntimeError(results[0])
 
 
+@dataclass
+class _V2CloudMessageResults:
+    errstr: str | None = None
+    send_time: float | None = None
+    response_time: float | None = None
+
+
 def _test_v2_cloud_message() -> None:
-    from dataclasses import dataclass
     import bacommon.cloud
 
-    @dataclass
-    class _Results:
-        errstr: str | None = None
-        send_time: float | None = None
-        response_time: float | None = None
-
-    results = _Results()
+    results = _V2CloudMessageResults()
 
     def _cb(response: bacommon.cloud.PingResponse | Exception) -> None:
         # Note: this runs in another thread so need to avoid exceptions.
@@ -463,24 +469,12 @@ def _test_v2_time() -> None:
 
 
 def _test_fetch(baseaddr: str) -> None:
-    # pylint: disable=consider-using-with
-    import urllib.request
 
-    assert bui.app.classic is not None
-    response = urllib.request.urlopen(
-        urllib.request.Request(
-            f'{baseaddr}/ping',
-            None,
-            {'User-Agent': bui.app.classic.legacy_user_agent_string},
-        ),
-        context=bui.app.net.sslcontext,
-        timeout=MAX_TEST_SECONDS,
-    )
-    if response.getcode() != 200:
-        raise RuntimeError(
-            f'Got unexpected response code {response.getcode()}.'
-        )
-    data = response.read()
+    upool = bui.app.net.urllib3pool
+    response = upool.request('GET', f'{baseaddr}/ping')
+    if response.status != 200:
+        raise RuntimeError(f'Got unexpected response code {response.status}.')
+    data = response.data
     if data != b'pong':
         raise RuntimeError('Got unexpected response data.')
 

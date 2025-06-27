@@ -11,6 +11,7 @@
 #include "ballistica/base/graphics/component/empty_component.h"
 #include "ballistica/base/graphics/component/simple_component.h"
 #include "ballistica/base/python/support/python_context_call.h"
+#include "ballistica/base/ui/ui.h"
 #include "ballistica/core/platform/core_platform.h"
 
 namespace ballistica::ui_v1 {
@@ -296,7 +297,8 @@ auto CheckBoxWidget::HandleMessage(const base::WidgetMessage& m) -> bool {
         return false;
       }
     }
-    case base::WidgetMessage::Type::kMouseUp: {
+    case base::WidgetMessage::Type::kMouseUp:
+    case base::WidgetMessage::Type::kMouseCancel: {
       float x = m.fval1;
       float y = m.fval2;
       bool claimed = (m.fval3 > 0.0f);
@@ -305,16 +307,19 @@ auto CheckBoxWidget::HandleMessage(const base::WidgetMessage& m) -> bool {
       if (pressed_) {
         pressed_ = false;
 
-        // if they're still over us and unclaimed, toggle.
-        if ((x >= (-left_overlap)) && (x < (width_ + right_overlap))
-            && (y >= (-bottom_overlap)) && (y < (height_ + top_overlap))
-            && !claimed) {
-          // Radio-style buttons don't allow unchecking.
-          if (!is_radio_button_ || !checked_) {
-            Activate();
+        if (m.type == base::WidgetMessage::Type::kMouseUp) {
+          // If they're still over us and unclaimed, toggle.
+          if ((x >= (-left_overlap)) && (x < (width_ + right_overlap))
+              && (y >= (-bottom_overlap)) && (y < (height_ + top_overlap))
+              && !claimed) {
+            // Radio-style buttons don't allow unchecking.
+            if (!is_radio_button_ || !checked_) {
+              Activate();
+            }
           }
         }
-        return true;  // If we're pressed, claim any mouse-ups presented to us.
+        // If we're pressed, claim any mouse-ups/cancels presented to us.
+        return true;
       }
       break;
     }

@@ -11,6 +11,8 @@
 #include "ballistica/base/graphics/component/simple_component.h"
 #include "ballistica/base/logic/logic.h"
 #include "ballistica/base/python/support/python_context_call.h"
+#include "ballistica/base/ui/ui.h"
+#include "ballistica/base/ui/widget_message.h"
 #include "ballistica/shared/foundation/event_loop.h"
 #include "ballistica/shared/generic/utils.h"
 #include "ballistica/shared/math/random.h"
@@ -646,7 +648,8 @@ auto ContainerWidget::HandleMessage(const base::WidgetMessage& m) -> bool {
       }
       break;
     }
-    case base::WidgetMessage::Type::kMouseUp: {
+    case base::WidgetMessage::Type::kMouseUp:
+    case base::WidgetMessage::Type::kMouseCancel: {
       CheckLayout();
       dragging_ = false;
       float x = m.fval1;
@@ -677,14 +680,16 @@ auto ContainerWidget::HandleMessage(const base::WidgetMessage& m) -> bool {
       float bottom_overlap = 2;
       float top_overlap = 2;
 
-      // When pressed, we *always* claim mouse-ups.
+      // When pressed, we *always* claim mouse-ups/cancels.
       if (pressed_) {
         pressed_ = false;
 
         // If we're pressed, mouse-ups within our region trigger activation.
         if (pressed_activate_ && !claimed && x >= l && x < r
             && y >= b - bottom_overlap && y < t + top_overlap) {
-          Activate();
+          if (m.type == base::WidgetMessage::Type::kMouseUp) {
+            Activate();
+          }
           pressed_activate_ = false;
         }
         return true;
@@ -692,9 +697,12 @@ auto ContainerWidget::HandleMessage(const base::WidgetMessage& m) -> bool {
       // If its not yet claimed, see if its within our contained region, in
       // which case we claim it but do nothing.
       if (!claimed) {
-        if (background_)
-          if (x >= l && x < r && y >= b - bottom_overlap && y < t + top_overlap)
+        if (background_) {
+          if (x >= l && x < r && y >= b - bottom_overlap
+              && y < t + top_overlap) {
             claimed = true;
+          }
+        }
       }
       break;
     }
@@ -1407,9 +1415,10 @@ void ContainerWidget::SelectWidget(Widget* w, SelectionCause c) {
     }
   } else {
     if (root_selectable_) {
-      g_core->Log(LogName::kBa, LogLevel::kError,
-                  "SelectWidget() called on a ContainerWidget which is itself "
-                  "selectable. Ignoring.");
+      g_core->logging->Log(
+          LogName::kBa, LogLevel::kError,
+          "SelectWidget() called on a ContainerWidget which is itself "
+          "selectable. Ignoring.");
       return;
     }
     for (auto& widget : widgets_) {
@@ -1434,9 +1443,9 @@ void ContainerWidget::SelectWidget(Widget* w, SelectionCause c) {
         } else {
           static bool printed = false;
           if (!printed) {
-            g_core->Log(LogName::kBa, LogLevel::kWarning,
-                        "SelectWidget called on unselectable widget: "
-                            + w->GetWidgetTypeName());
+            g_core->logging->Log(LogName::kBa, LogLevel::kWarning,
+                                 "SelectWidget called on unselectable widget: "
+                                     + w->GetWidgetTypeName());
             Python::PrintStackTrace();
             printed = true;
           }
@@ -1639,8 +1648,8 @@ void ContainerWidget::SelectDownWidget() {
     }
     if (w) {
       if (!w->IsSelectable()) {
-        g_core->Log(LogName::kBa, LogLevel::kError,
-                    "Down_widget is not selectable.");
+        g_core->logging->Log(LogName::kBa, LogLevel::kError,
+                             "Down_widget is not selectable.");
       } else {
         w->Show();
         // Avoid tap sounds and whatnot if we're just re-selecting ourself.
@@ -1705,8 +1714,8 @@ void ContainerWidget::SelectUpWidget() {
     }
     if (w) {
       if (!w->IsSelectable()) {
-        g_core->Log(LogName::kBa, LogLevel::kError,
-                    "up_widget is not selectable.");
+        g_core->logging->Log(LogName::kBa, LogLevel::kError,
+                             "up_widget is not selectable.");
       } else {
         w->Show();
         // Avoid tap sounds and whatnot if we're just re-selecting ourself.
@@ -1759,8 +1768,8 @@ void ContainerWidget::SelectLeftWidget() {
     }
     if (w) {
       if (!w->IsSelectable()) {
-        g_core->Log(LogName::kBa, LogLevel::kError,
-                    "left_widget is not selectable.");
+        g_core->logging->Log(LogName::kBa, LogLevel::kError,
+                             "left_widget is not selectable.");
       } else {
         w->Show();
         // Avoid tap sounds and whatnot if we're just re-selecting ourself.
@@ -1813,8 +1822,8 @@ void ContainerWidget::SelectRightWidget() {
     }
     if (w) {
       if (!w->IsSelectable()) {
-        g_core->Log(LogName::kBa, LogLevel::kError,
-                    "right_widget is not selectable.");
+        g_core->logging->Log(LogName::kBa, LogLevel::kError,
+                             "right_widget is not selectable.");
       } else {
         w->Show();
         // Avoid tap sounds and whatnot if we're just re-selecting ourself.
@@ -1930,7 +1939,7 @@ void ContainerWidget::PrintExitListInstructions(
         Utils::StringReplaceOne(
             &s, "${RIGHT}", g_base->assets->CharStr(SpecialChar::kRightArrow));
       }
-      ScreenMessage(s);
+      g_base->ScreenMessage(s);
     }
   }
 }

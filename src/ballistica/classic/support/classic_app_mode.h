@@ -48,6 +48,8 @@ class ClassicAppMode : public base::AppMode {
   /// it to ever occur.
   static auto GetActiveOrFatal() -> ClassicAppMode*;
 
+  void RequestMainUI() override;
+
   auto HandleJSONPing(const std::string& data_str) -> std::string override;
   void HandleIncomingUDPPacket(const std::vector<uint8_t>& data_in,
                                const SockAddr& addr) override;
@@ -85,7 +87,7 @@ class ClassicAppMode : public base::AppMode {
   auto chat_messages() const -> const std::list<std::string>& {
     return chat_messages_;
   }
-  void DoApplyAppConfig() override;
+  void ApplyAppConfig() override;
 
   // Return whichever session is front and center.
   auto GetForegroundSession() const -> scene_v1::Session* {

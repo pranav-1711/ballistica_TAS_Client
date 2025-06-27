@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, override
 from babase import AppSubsystem
 
 import _baplus
+from baplus._ads import AdsSubsystem
 
 if TYPE_CHECKING:
     from typing import Callable, Any
@@ -29,12 +30,13 @@ class PlusAppSubsystem(AppSubsystem):
 
     # pylint: disable=too-many-public-methods
 
-    # Note: this is basically just a wrapper around _baplus for
-    # type-checking purposes. Maybe there's some smart way we could skip
-    # the overhead of this wrapper at runtime.
-
     accounts: AccountV2Subsystem
     cloud: CloudSubsystem
+
+    def __init__(self) -> None:
+
+        #: Ad wrangling functionality.
+        self.ads: AdsSubsystem = AdsSubsystem()
 
     @override
     def on_app_loading(self) -> None:
@@ -256,50 +258,6 @@ class PlusAppSubsystem(AppSubsystem):
         :meta private:
         """
         return _baplus.supports_purchases()
-
-    @staticmethod
-    def have_incentivized_ad() -> bool:
-        """Is an incentivized ad available?
-
-        :meta private:
-        """
-        return _baplus.have_incentivized_ad()
-
-    @staticmethod
-    def has_video_ads() -> bool:
-        """Are video ads available?
-
-        :meta private:
-        """
-        return _baplus.has_video_ads()
-
-    @staticmethod
-    def can_show_ad() -> bool:
-        """Can we show an ad?
-
-        :meta private:
-        """
-        return _baplus.can_show_ad()
-
-    @staticmethod
-    def show_ad(
-        purpose: str, on_completion_call: Callable[[], None] | None = None
-    ) -> None:
-        """Show an ad.
-
-        :meta private:
-        """
-        _baplus.show_ad(purpose, on_completion_call)
-
-    @staticmethod
-    def show_ad_2(
-        purpose: str, on_completion_call: Callable[[bool], None] | None = None
-    ) -> None:
-        """Show an ad.
-
-        :meta private:
-        """
-        _baplus.show_ad_2(purpose, on_completion_call)
 
     @staticmethod
     def show_game_service_ui(

@@ -23,7 +23,7 @@ class BasePython {
   void OnAppUnsuspend();
   void OnAppShutdown();
   void OnAppShutdownComplete();
-  void DoApplyAppConfig();
+  void ApplyAppConfig();
   void OnScreenSizeChange();
   void StepDisplayTime();
 
@@ -40,7 +40,7 @@ class BasePython {
     kTranslateCall,
     kLStrClass,
     kCallClass,
-    kGarbageCollectSessionEndCall,
+    kAppGCCollectCall,
     kConfig,
     kAppOnNativeBootstrappingCompleteCall,
     kResetToMainMenuCall,
@@ -114,6 +114,7 @@ class BasePython {
     kDevConsoleStringEditAdapterClass,
     kGetDevConsoleTabNamesCall,
     kAppDevConsoleDoRefreshTabCall,
+    kAppDevConsoleSaveTabCall,
     kUnsupportedControllerMessageCall,
     kGetV2AccountIdCall,
     kAppOnNativeActiveChangedCall,

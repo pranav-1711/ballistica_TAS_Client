@@ -31,7 +31,6 @@ values = [
     _hooks.root_ui_back_button_press,  # kRootUIBackButtonPressCall
     _hooks.root_ui_squad_button_press,  # kRootUISquadButtonPressCall
     _hooks.quit_window,  # kQuitWindowCall
-    _hooks.device_menu_press,  # kDeviceMenuPressCall
     _hooks.show_url_window,  # kShowURLWindowCall
     _hooks.double_transition_out_warning,  # kDoubleTransitionOutWarningCall
     TextWidgetStringEditAdapter,  # kTextWidgetStringEditAdapterClass

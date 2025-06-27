@@ -1,4 +1,96 @@
-### 1.7.42 (build 22395, api 9, 2025-06-03)
+### 1.7.44 (build 22446, api 9, 2025-06-25)
+- Added a `-B` / `--dont-write-bytecode` flag to disable writing .pyc files, and
+  an associated `dont_write_bytecode` value for the server config file. In most
+  cases writing .pyc files is useful as it can speed up relaunches and keep
+  things running smoother, but if you are doing something like generating tons
+  of config dirs for your servers then having the cache directories under each
+  of them fill with .pyc files may be wasteful.
+- Renamed the `setup_pycache` arg in `baenv` to `setup_pycache_prefix` and
+  switched it to default to `False` instead of `True`. Monolithic builds (pretty
+  much everything that matters currently) now explicitly pass `True` for it. The
+  only real impact this has is that modular builds now use totally vanilla
+  Python caching behavior (`__pycache__` dirs) instead of nagging the user about
+  manually setting the 'PYTHONPYCACHEPREFIX' env var to specific values.
+- The new pycache dir is now simply `(CACHE_DIR)/pyc` instead of
+  `(CACHE_DIR)/pyc/(BUILD_NUMBER)`. Having a single directory slightly
+  complicates the logic of pruning outdated caches, but I think I prefer that
+  over having to regerate a completely new cache each time a minor update comes
+  through.
+- Pycache upkeep now waits until a few seconds after the app is started up and
+  limits its speed a bit to avoid slowing down app startup and minimize the
+  possibility of hitches.
+- Holding shift while pressing a dev-console toggle key (~ or F2) now cycles it
+  in reverse.
+- The dev-console now remembers which tab was selected between runs.
+- The dev-console logging tab now remembers which logger you were last viewing
+  between app runs. This means if you have one particular logger you flip off
+  and on a lot you can generally get at it by just bringing up the small size
+  dev-console.
+- Cleaned up input handling. Now, if there is a single player using the local
+  device, all escape/menu/back buttons will bring up the menu associated with
+  that player, allowing leaving the game with just that player instead of fully
+  exiting to the menu/etc. This worked in limited situations before the big
+  1.7.37 UI revamp, but now is more generalized and consistent.
+- Added various debug logging for input devices (set `ba.input` to 'Debug' in
+  the dev-console logging tab to see it).
+- Software cursor no longer freezes during fades or other input-locked
+  situations and now draws over the top of fades instead of being affected by
+  them (makes it more consistent with hardware cursors).
+- Software cursor in sdl builds now disappears when the cursor leaves the window
+  instead of getting stuck at the edge.
+- Replaced all uses of Python's built in `urllib.request` with our bundled
+  `urllib3`. This should perform better and hopefully won't get stuck at
+  shutdown like old urllib was prone to do. Please holler if you run into any
+  sort of connectivity issues that weren't there before.
+- Turned the `babase.garbage_collect()` function into a full subsystem
+  (`ba*.app.gc`). It will now warn if too many objects are resorting to cyclic
+  garbage collection due to reference loops, and it offers some tips and
+  functionality to help track down and eliminate said loops. Check out the
+  `GarbageCollectionSubsystem` documentation for more info.
+- Added proper support for mouse-cancel events. This fixes an annoying issue
+  where using home-bar nav gestures on Android to switch apps could lead to
+  unintended button presses (namely on chest slots since that is near the home
+  bar).
+- Fixed issues on some versions of Android with ads being cut off by system bars
+  at screen edges.
+- (build 22431) Using Android back gestures to bring up the in-game menu now
+  properly shows leave-game options for a single local player (similar fix as
+  mentioned above).
+- Tweaked the default on-screen controls positions slightly for modern phones.
+- The audio-server now inits itself asynchronously, which in my tests can shave
+  5-10% off of startup times. Please holler if you experience any odd audio
+  behavior in this build.
+- Officially deprecated the `# ba_meta export plugin` shortcut - you should
+  switch to `# ba_meta export babase.Plugin` if you have not yet. The former
+  will still work for now but will emit a warning.
+- Interstitial ads now show when playing tournaments. Sorry folks. But now that
+  tourneys are free, it doesn't make sense to give them a benefit over other
+  single-player play which *does* show ads. Remember you can permanently remove
+  ads for your account by buying the cheapest token pack. Either way, thanks for
+  helping me buy coffee.
+- Android version now pauses GL rendering while ads are showing (since it is not
+  visible anyway). Should save a bit of battery and help interactive ads play
+  smoother.
+- Cleared out several reference cycles using the new ref-loop detection
+  garbage-collection stuff. Learned an important lesson: don't create dataclass
+  classes within functions, as they seem to always wind up with reference cycles
+  and you'll leak memory each time you call that function (until manual gc is
+  finally run). I found that tutorial.py was creating 214 reference-cycled
+  objects per run due to a bunch of dataclasses defined in a function. Moving
+  them to the global scope dropped that to 0. Another cycle culprit was Flag
+  classes in a few minigames. I fixed those using weakrefs to break the cycles.
+- Didn't realize we've technically been requiring OpenGL 3.2 on desktop; not
+  3.0. Updated checks accordingly so any 3.0/3.1 people will get better error
+  messages.
+- The 'Logging' dev-console-tab has been polished up a bit, and now includes
+  descriptions for ballistica's various loggers.
+- Added `efro.util.cleanup_exception_chain()` which can help break reference
+  cycles caused by handling exceptions.
+
+### 1.7.43 (build 22406, api 9, 2025-06-09)
+- Fixes an issue with tournament scores not submitting properly in 1.7.42.
+
+### 1.7.42 (build 22402, api 9, 2025-06-08)
 - Basic Discord social sdk support is now in place, but not yet enabled in by
   default in builds (Thanks Loup-Garou911XD!).
 - Added `discord_start`, `discord_richpresence`, `discord_set_party`,
@@ -9,21 +101,64 @@
   int arrays.
 - Windows builds are now 64 bit. The last time I made this switch I heard from
   some folks who still needed 32 bit so I switched it back, but this time there
-  are technical reasons: we're adopting the discord social sdk which requires
-  it. Also, Windows 10 will be officially end-of-life this coming October and
+  are technical reasons: we're adopting the discord social sdk which is 64 bit
+  only. Also, Windows 10 will be officially end-of-life this coming October and
   Windows 11 is 64 bit only. If you still need 32 bit builds please holler;
   maybe we can maintain a stripped-down test build or something.
 - Mac prefab builds for Intel Macs are now enabled again. I had disabled these
   thinking they were likely unused but was happy to find out I was wrong about
   that.
 - Added 'Race' and 'Pro Race' to the Practice co-op section.
-- Added `ba*.app.env.volatile_data_directory` which is where the app can put
-  downloaded assets and other data that it needs to keep but which it can
-  recreate if needed.
 - Removed the `ba*.app.env.test`, `ba*.app.env.arcade`, and `ba*.app.env.demo`
   values, which were redundant now that `ba*.app.env.variant` exists.
-- Removed the `ba*.app.env.android` value which is redundant now that we have
+- Removed the `ba*.app.env.android` value which was redundant now that we have
   `ba*.app.env.platform`.
+- The `ba*.app.env.debug` value is now `ba*.app.env.debug_build` to make it more
+  clear that this refers to how the app was built; not to a setting that can be
+  flipped on or off at runtime (like Python's `__debug__` value).
+- Added `ba*.app.env.cache_directory` which is where the app can put downloaded
+  assets and other data that it wants to keep but which it can recreate if
+  needed. It should always be safe to blow any or all of this data away between
+  runs (as the OS itself might do so in some cases).
+- You can now pass `--cache-dir` or `-a` on the command line to override the
+  app's cache directory. Its default varies per platform but the standard one is
+  `(CONFIG-DIR)/cache`.
+- The `volatile_data_directory` concept which was used internally has been
+  replaced by the new cache directory, so if you see a `vdata` dir in your app
+  config dir you can delete it to keep things tidy.
+- Backup configs are now named `.config_prev.json` instead of
+  `config.json.prev`. This keeps them hidden by default on unix-y OSs for a
+  tidier look, and also keeps .json file associations working. Feel free to blow
+  away any `config.json.prev` files you have lying around.
+- Debug builds will now blow away the occasional random file from the cache-dir
+  just before spinning up the engine. This is meant to exercise the app's
+  ability to recreate anything the OS itself might purge between runs (we make
+  the guarantee that cache-dir files remain intact while the app is running but
+  no such guarantees between runs).
+- The engine is now set up to generate its own Python bytecode (.pyc) files in
+  the cache-dir using the PYTHONPYCACHEPREFIX functionality introduced in Python
+  3.8. It will run a background thread to prune or regenerate .pyc files as
+  needed so the full cache should always be up to date (outside of the first few
+  moments when launching a new app version). Previously the app shipped with
+  .pyc files scattered in `__pycache__` dirs throughout the codebase which were
+  set to always be used when present, which lead to confusing behavior where
+  edits to bundled .py files would be ignored unless the associated .pyc file
+  was deleted first. Now things should be much more intuitive: there are only
+  .py files in ba_data and edits to them will work as expected; all .pyc
+  wrangling is handled automagically in the background. This makes me especially
+  happy as it allows me to simplify asset pipelines. Please holler if you run
+  into any side-effects of this system such as hitches or slowness on launch
+  compared to previous versions.
+- Cleaned up threading and shutdown behavior. The app now properly shuts down
+  Python on exit which means it will block and wait for all Python threads to
+  finish (though it will still force the issue and quit immediately if stuck for
+  a while). Also purged all uses of 'daemon=True' in threads which is generally
+  considered unsafe due to such threads possibly accessing Python state after
+  Python has shut down. So this new setup is safer and more deterministic but we
+  need to be careful about making sure all threads properly exit at app
+  shutdown. If you run into cases where the app consistently gets stuck when
+  trying to exit or you see warnings about unexpected threads still running,
+  please holler.
   
 ### 1.7.41 (build 22382, api 9, 2025-05-25)
 - Fixed a few unsafe accesses of cJSON objects that could be exploited to crash

@@ -10,6 +10,7 @@
 
 #include "ballistica/base/base.h"
 #include "ballistica/base/python/base_python.h"
+#include "ballistica/core/core.h"
 #include "ballistica/core/platform/core_platform.h"
 
 namespace ballistica::base {
@@ -109,15 +110,15 @@ static auto AppPlatformEntry_() -> std::unique_ptr<EnvEntryBase_> {
       "bacommon.app.AppPlatform", "Platform we are running on."));
 }
 
-static auto AppPlatformTypeEntry_() -> std::unique_ptr<EnvEntryBase_> {
-  return std::unique_ptr<EnvEntryBase_>(new EnvEntry_(
-      [] {
-        return g_base->python->objs()
-            .Get(BasePython::ObjID::kAppPlatformType)
-            .NewRef();
-      },
-      "type[bacommon.app.AppPlatform]", "TestingBlah."));
-}
+// static auto AppPlatformTypeEntry_() -> std::unique_ptr<EnvEntryBase_> {
+//   return std::unique_ptr<EnvEntryBase_>(new EnvEntry_(
+//       [] {
+//         return g_base->python->objs()
+//             .Get(BasePython::ObjID::kAppPlatformType)
+//             .NewRef();
+//       },
+//       "type[bacommon.app.AppPlatform]", "TestingBlah."));
+// }
 
 // static auto GetExtraAttrs_() -> std::map<std::string, PythonRef>* {
 //   if (!g_extra_attrs_) {
@@ -199,36 +200,44 @@ void PythonClassEnv::SetupType(PyTypeObject* cls) {
       "'quitting' may leave the app running in the background waiting\n"
       "in case it is used again.");
 
-  envs["debug"] = BoolEntry_(
+  envs["debug_build"] = BoolEntry_(
       g_buildconfig.debug_build(),
-      "Whether the app is running in debug mode.\n"
+      "Whether this is a debug build of the app.\n"
       "\n"
-      "Debug builds generally run substantially slower than non-debug\n"
+      "Debug builds generally run substantially slower than release\n"
       "builds due to compiler optimizations being disabled and extra\n"
-      "checks being run.");
+      "runtime checks being enabled.");
+
+  envs["config_directory"] = StrEntry_(
+      g_core->GetConfigDirectory(),
+      "Path of the directory where the app's config file and other\n"
+      "user data live. By default, :attr:`cache_directory` and\n"
+      ":attr:`python_directory_user` are located within this directory as\n"
+      "well (though that varies per platform).\n");
 
   envs["config_file_path"] =
-      StrEntry_(g_core->platform->GetConfigFilePath(),
+      StrEntry_(g_core->GetConfigFilePath(),
                 "Where the app's config file is stored on disk.");
 
   envs["data_directory"] = StrEntry_(g_core->GetDataDirectory(),
                                      "Where bundled static app data lives.");
 
-  envs["volatile_data_directory"] = StrEntry_(
-      g_core->platform->GetVolatileDataDirectory(),
-      "Where the app can write large amounts of working data. This data\n"
-      "is guaranteed to persist as long as the app is running, and it\n"
-      "generally can be expected to persist between runs, but the app must\n"
-      "be prepared for the possibility of it being gone at launch, and it\n"
-      "will also be excluded from backups (on applicable platforms).\n"
-      "So anything that goes here should be reproducible.");
+  envs["cache_directory"] = StrEntry_(
+      g_core->GetCacheDirectory(),
+      "A directory where the app can place files guaranteed to exist\n"
+      "as long as the app remains running (and likely longer). The app\n"
+      "must be prepared for the possibility of any or all files here\n"
+      "disappearing between runs, though the conditions for and likelyhood\n"
+      "of this occurring varies between platforms. Note that debug builds\n"
+      "may explicitly delete random cache files at launch to exercise this\n"
+      "constraint.");
 
   envs["os_version"] = StrEntry_(
       g_core->platform->GetOSVersionString(),
       "Platform-specific os version string provided by the native layer.\n"
       "\n"
-      "Note that more detailed OS information may be available through\n"
-      "the Python :mod:`platform` module.");
+      "Note that more detailed OS information is generally available through\n"
+      "the stdlib :mod:`platform` module.");
 
   envs["api_version"] = IntEntry_(
       kEngineApiVersion,
@@ -244,9 +253,10 @@ void PythonClassEnv::SetupType(PyTypeObject* cls) {
 
   envs["locale_tag"] = StrEntry_(
       g_core->platform->GetLocaleTag(),
-      "Locale tag for the current environment in BCP 47 or POSIX"
-      " localization\n"
-      "string form; will be something like ``en-US`` or ``en_US.UTF-8``.");
+      "Raw string locale tag for the current environment in BCP 47 or POSIX\n"
+      " localization string form; will be something like ``en-US`` or\n"
+      "``en_US.UTF-8``. Most things needing locale functionality should look\n"
+      "at :class:`~babase.LocaleSubsystem`.");
 
   envs["python_directory_user"] = OptionalStrEntry_(
       g_core->GetUserPythonDirectory(),
@@ -289,10 +299,18 @@ void PythonClassEnv::SetupType(PyTypeObject* cls) {
                            "\n"
                            "This is the opposite of `headless`.");
 
+  envs["monolithic_build"] = BoolEntry_(
+      g_buildconfig.monolithic_build(),
+      "Whether this is a monolithic build of the app.\n"
+      "\n"
+      "Monolithic builds contain and manage their own embedded Python\n"
+      "interpreter. Modular builds, on the other hand, consist of binary\n"
+      "Python modules used with a standalone Python interpreter.");
+
   envs["arch"] = AppArchitectureEntry_();
   envs["variant"] = AppVariantEntry_();
   envs["platform"] = AppPlatformEntry_();
-  envs["Platform"] = AppPlatformTypeEntry_();
+  // envs["Platform"] = AppPlatformTypeEntry_();
 
   bool first = true;
 

@@ -17,8 +17,6 @@ functionality from here and reexpose it in a more focused way.
 # dependency loops. The exception is TYPE_CHECKING blocks and
 # annotations since those aren't evaluated at runtime.
 
-# from efro.util import set_canonical_module_names
-
 import _babase
 from _babase import (
     add_clean_frame_callback,
@@ -30,6 +28,7 @@ from _babase import (
     apptime,
     apptimer,
     AppTimer,
+    atexit,
     asset_loads_allowed,
     fullscreen_control_available,
     fullscreen_control_get,
@@ -69,7 +68,7 @@ from _babase import (
     in_logic_thread,
     in_main_menu,
     increment_analytics_count,
-    invoke_main_menu,
+    request_main_ui,
     is_os_playing_music,
     is_xcode_build,
     lock_all_input,
@@ -79,6 +78,7 @@ from _babase import (
     mac_music_app_play_playlist,
     mac_music_app_set_volume,
     mac_music_app_stop,
+    menu_press,
     music_player_play,
     music_player_set_volume,
     music_player_shutdown,
@@ -93,7 +93,6 @@ from _babase import (
     overlay_web_browser_is_supported,
     overlay_web_browser_open_url,
     print_load_info,
-    push_back_press,
     pushcall,
     quit,
     reload_media,
@@ -103,8 +102,8 @@ from _babase import (
     set_analytics_screen,
     set_low_level_config_value,
     set_thread_name,
+    set_main_ui_input_device,
     set_ui_account_state,
-    set_ui_input_device,
     set_ui_scale,
     show_progress_bar,
     shutdown_suppress_begin,
@@ -134,7 +133,6 @@ from babase._appconfig import AppConfig
 from babase._apputils import (
     handle_leftover_v1_cloud_log_file,
     is_browser_likely_available,
-    garbage_collect,
     get_remote_app_name,
     AppHealthSubsystem,
     utc_now_cloud,
@@ -145,6 +143,7 @@ from babase._devconsole import (
     DevConsoleTabEntry,
     DevConsoleSubsystem,
 )
+from babase._discord import Discord
 from babase._emptyappmode import EmptyAppMode
 from babase._error import (
     ContextError,
@@ -162,6 +161,7 @@ from babase._error import (
     SessionNotFoundError,
     DelegateNotFoundError,
 )
+from babase._gc import GarbageCollectionSubsystem
 from babase._general import (
     DisplayTime,
     AppTime,
@@ -230,6 +230,7 @@ __all__ = [
     'apptimer',
     'AppTimer',
     'asset_loads_allowed',
+    'atexit',
     'balog',
     'Call',
     'fullscreen_control_available',
@@ -251,6 +252,7 @@ __all__ = [
     'DevConsoleTab',
     'DevConsoleTabEntry',
     'DevConsoleSubsystem',
+    'Discord',
     'DisplayTime',
     'displaytime',
     'displaytimer',
@@ -263,7 +265,7 @@ __all__ = [
     'existing',
     'fade_screen',
     'fatal_error',
-    'garbage_collect',
+    'GarbageCollectionSubsystem',
     'get_display_resolution',
     'get_immediate_return_code',
     'get_input_idle_time',
@@ -289,7 +291,7 @@ __all__ = [
     'increment_analytics_count',
     'InputDeviceNotFoundError',
     'InputType',
-    'invoke_main_menu',
+    'request_main_ui',
     'is_browser_likely_available',
     'is_browser_likely_available',
     'is_os_playing_music',
@@ -309,6 +311,7 @@ __all__ = [
     'mac_music_app_set_volume',
     'mac_music_app_stop',
     'MapNotFoundError',
+    'menu_press',
     'MetadataSubsystem',
     'music_player_play',
     'music_player_set_volume',
@@ -333,7 +336,6 @@ __all__ = [
     'PluginSubsystem',
     'PluginSpec',
     'print_load_info',
-    'push_back_press',
     'pushcall',
     'quit',
     'QuitType',
@@ -346,9 +348,9 @@ __all__ = [
     'SessionTeamNotFoundError',
     'set_analytics_screen',
     'set_low_level_config_value',
+    'set_main_ui_input_device',
     'set_thread_name',
     'set_ui_account_state',
-    'set_ui_input_device',
     'set_ui_scale',
     'show_progress_bar',
     'shutdown_suppress_begin',

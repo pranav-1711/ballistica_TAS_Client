@@ -31,7 +31,7 @@ class AppMode {
   virtual void OnAppUnsuspend();
   virtual void OnAppShutdown();
   virtual void OnAppShutdownComplete();
-  virtual void DoApplyAppConfig();
+  virtual void ApplyAppConfig();
 
   /// Update the logic thread for a new display-time. Can be called at any
   /// frequency. In gui builds, generally corresponds with frame drawing. In
@@ -51,6 +51,9 @@ class AppMode {
   /// Return a raw pointer allocated using Object::NewDeferred.
   virtual auto CreateInputDeviceDelegate(InputDevice* device)
       -> InputDeviceDelegate*;
+
+  /// Attempt to bring up a main ui (generally an in-game menu).
+  virtual void RequestMainUI();
 
   /// Speed/slow stuff (generally debug builds only).
   virtual void ChangeGameSpeed(int offs);

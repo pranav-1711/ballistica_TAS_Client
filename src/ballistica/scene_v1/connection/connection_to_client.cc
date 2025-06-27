@@ -15,6 +15,7 @@
 #include "ballistica/base/python/base_python.h"
 #include "ballistica/base/support/plus_soft.h"
 #include "ballistica/classic/support/classic_app_mode.h"
+#include "ballistica/core/logging/logging_macros.h"
 #include "ballistica/core/python/core_python.h"
 #include "ballistica/scene_v1/connection/connection_set.h"
 #include "ballistica/scene_v1/python/scene_v1_python.h"
@@ -24,6 +25,7 @@
 #include "ballistica/scene_v1/support/host_session.h"
 #include "ballistica/shared/generic/json.h"
 #include "ballistica/shared/generic/utils.h"
+#include "ballistica/shared/python/python.h"
 
 namespace ballistica::scene_v1 {
 
@@ -87,7 +89,7 @@ ConnectionToClient::~ConnectionToClient() {
       && appmode->ShouldAnnouncePartyJoinsAndLeaves()) {
     std::string s = g_base->assets->GetResourceString("playerLeftPartyText");
     Utils::StringReplaceOne(&s, "${NAME}", peer_spec().GetDisplayString());
-    ScreenMessage(s, {1, 0.5f, 0.0f});
+    g_base->ScreenMessage(s, {1, 0.5f, 0.0f});
     if (g_base->assets->sys_assets_loaded()) {
       g_base->audio->SafePlaySysSound(base::SysSoundID::kCorkPop);
     }
@@ -210,7 +212,7 @@ void ConnectionToClient::HandleGamePacket(const std::vector<uint8_t>& data) {
 
       // If they sent us a garbage player-spec, kick them right out.
       if (!peer_spec().valid()) {
-        g_core->Log(LogName::kBaNetworking, LogLevel::kDebug, [] {
+        g_core->logging->Log(LogName::kBaNetworking, LogLevel::kDebug, [] {
           return std::string(
               "Rejecting client for submitting invalid player-spec.");
         });
@@ -225,7 +227,7 @@ void ConnectionToClient::HandleGamePacket(const std::vector<uint8_t>& data) {
       // Compare this against our blocked specs.. if there's a match, reject
       // them.
       if (appmode->IsPlayerBanned(peer_spec())) {
-        g_core->Log(LogName::kBaNetworking, LogLevel::kDebug, [] {
+        g_core->logging->Log(LogName::kBaNetworking, LogLevel::kDebug, [] {
           return std::string("Rejecting join attempt by banned player.");
         });
         Error("");
@@ -270,7 +272,7 @@ void ConnectionToClient::HandleGamePacket(const std::vector<uint8_t>& data) {
               g_base->assets->GetResourceString("playerJoinedPartyText");
           Utils::StringReplaceOne(&s, "${NAME}",
                                   peer_spec().GetDisplayString());
-          ScreenMessage(s, {0.5f, 1, 0.5f});
+          g_base->ScreenMessage(s, {0.5f, 1, 0.5f});
           if (g_base->assets->sys_assets_loaded()) {
             g_base->audio->SafePlaySysSound(base::SysSoundID::kGunCock);
           }
@@ -756,9 +758,10 @@ void ConnectionToClient::HandleMessagePacket(
         if (multipart_buffer_size() > 50000) {
           // Its not actually unknown but shhh don't tell the hackers...
           SendScreenMessage(R"({"r":"errorUnknownText"})", 1, 0, 0);
-          g_core->Log(LogName::kBaNetworking, LogLevel::kWarning,
-                      "Client data limit exceeded by '"
-                          + peer_spec().GetShortName() + "'; kicking.");
+          g_core->logging->Log(LogName::kBaNetworking, LogLevel::kWarning,
+                               "Client data limit exceeded by '"
+                                   + peer_spec().GetShortName()
+                                   + "'; kicking.");
           appmode->BanPlayer(peer_spec(), 1000 * 60);
           Error("");
           return;
@@ -837,7 +840,7 @@ void ConnectionToClient::HandleMasterServerClientInfo(PyObject* info_obj) {
   // Store it away for whoever wants it.
   PyObject* public_id_obj = PyDict_GetItemString(info_obj, "u");
   if (public_id_obj != nullptr && g_base->python->IsPyLString(public_id_obj)) {
-    peer_public_account_id_ = g_base->python->GetPyLString(public_id_obj);
+    peer_public_account_id_ = Python::GetString(public_id_obj);
   } else {
     peer_public_account_id_ = "";
 
@@ -849,9 +852,9 @@ void ConnectionToClient::HandleMasterServerClientInfo(PyObject* info_obj) {
           "{\"t\":[\"serverResponses\","
           "\"Your account was rejected. Are you signed in?\"]}",
           1, 0, 0);
-      g_core->Log(LogName::kBaNetworking, LogLevel::kWarning,
-                  "Master server found no valid account for '"
-                      + peer_spec().GetShortName() + "'; kicking.");
+      g_core->logging->Log(LogName::kBaNetworking, LogLevel::kWarning,
+                           "Master server found no valid account for '"
+                               + peer_spec().GetShortName() + "'; kicking.");
 
       // Not benning anymore. People were exploiting this by impersonating
       // other players using their public ids to get them banned from

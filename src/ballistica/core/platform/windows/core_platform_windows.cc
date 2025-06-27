@@ -13,7 +13,9 @@
 #include <sysinfoapi.h>
 
 /* clang-format off */
-// Builds fail if this is further up.
+// Builds fail if this is further up, so we need to disable clang-format to
+// keep that from happening.
+//
 // This define gives us the unicode version.
 #define DBGHELP_TRANSLATE_TCHAR
 #include <dbghelp.h>
@@ -44,6 +46,8 @@
 #pragma comment(lib, "SDL2main.lib")
 #endif
 
+#include "ballistica/core/core.h"
+#include "ballistica/core/logging/logging.h"
 #include "ballistica/shared/foundation/event_loop.h"
 #include "ballistica/shared/generic/native_stack_trace.h"
 #include "ballistica/shared/generic/utils.h"
@@ -621,6 +625,9 @@ std::string CorePlatformWindows::GetLocaleTag() {
     case 9226:
       return "es_CO";
       break;  // Spanish - Colombia
+    case 16393:
+      return "en_IN";
+      break;  // English - India
     case 3081:
       return "en_AU";
       break;  // English - Australia
@@ -811,6 +818,8 @@ std::string CorePlatformWindows::GetLocaleTag() {
       return "hu_HU";
       break;  // Hungarian
     default:
+      // This will fail to resolve to a Locale but it should generate a
+      // warning so we know to fix it.
       return "lcid_" + std::to_string(lcid);
   }
 }
@@ -854,12 +863,7 @@ bool CorePlatformWindows::DoHasTouchScreen() { return false; }
 void CorePlatformWindows::EmitPlatformLog(const std::string& name,
                                           LogLevel level,
                                           const std::string& msg) {
-  // if (have_stdin_stdout_) {
-  //   // On headless builds we use default handler (simple stdout).
-  //   return CorePlatform::EmitPlatformLog(msg);
-  // }
-
-  // Also spit this out as a debug-string for when running from msvc.
+  // Spit this out as a debug-string for when running from msvc.
   OutputDebugString(UTF8Decode(msg).c_str());
 }
 
@@ -919,8 +923,8 @@ auto CorePlatformWindows::GetEnv(const std::string& name)
 
   // This should always succeed at this point; make noise if not.
   if (result == 0 || result > big_buffer.size()) {
-    g_core->Log(LogName::kBa, LogLevel::kError,
-                "GetEnv to allocated buffer failed; unexpected.");
+    g_core->logging->Log(LogName::kBa, LogLevel::kError,
+                         "GetEnv to allocated buffer failed; unexpected.");
     return {};
   }
   return UTF8Encode(big_buffer.data());
@@ -998,15 +1002,15 @@ std::vector<uint32_t> CorePlatformWindows::GetBroadcastAddrs() {
       pIPAddrTable = static_cast<MIB_IPADDRTABLE*>(MALLOC(dwSize));
     }
     if (pIPAddrTable == nullptr) {
-      g_core->Log(LogName::kBa, LogLevel::kError,
-                  "Memory allocation failed for GetIpAddrTable\n");
+      g_core->logging->Log(LogName::kBa, LogLevel::kError,
+                           "Memory allocation failed for GetIpAddrTable\n");
       err = true;
     }
 
     if (!err) {
       // Make a second call to GetIpAddrTable to get the actual data we want
       if ((dwRetVal = GetIpAddrTable(pIPAddrTable, &dwSize, 0)) != NO_ERROR) {
-        g_core->Log(
+        g_core->logging->Log(
             LogName::kBa, LogLevel::kError,
             "GetIpAddrTable failed with error " + std::to_string(dwRetVal));
         err = true;
@@ -1043,9 +1047,9 @@ bool CorePlatformWindows::SetSocketNonBlocking(int sd) {
   unsigned long dataval = 1;  // NOLINT (func signature wants long)
   int result = ioctlsocket(sd, FIONBIO, &dataval);
   if (result != 0) {
-    g_core->Log(LogName::kBa, LogLevel::kError,
-                "Error setting non-blocking socket: "
-                    + g_core->platform->GetSocketErrorString());
+    g_core->logging->Log(LogName::kBa, LogLevel::kError,
+                         "Error setting non-blocking socket: "
+                             + g_core->platform->GetSocketErrorString());
     return false;
   }
   return true;

@@ -7,6 +7,9 @@
 
 #include <string>
 
+#include "ballistica/core/core.h"
+#include "ballistica/core/logging/logging.h"
+
 namespace ballistica::base {
 
 BasePlatformLinux::BasePlatformLinux() = default;
@@ -23,9 +26,9 @@ void BasePlatformLinux::OpenDirExternally(const std::string& path) {
   std::string cmd = std::string("xdg-open \"") + path + "\"";
   int result = system(cmd.c_str());
   if (result != 0) {
-    g_core->Log(LogName::kBa, LogLevel::kError,
-                "Got return value " + std::to_string(result)
-                    + " on xdg-open cmd '" + cmd + "'");
+    g_core->logging->Log(LogName::kBa, LogLevel::kError,
+                         "Got return value " + std::to_string(result)
+                             + " on xdg-open cmd '" + cmd + "'");
   }
 }
 
@@ -33,9 +36,9 @@ void BasePlatformLinux::OpenFileExternally(const std::string& path) {
   std::string cmd = std::string("xdg-open \"") + path + "\"";
   int result = system(cmd.c_str());
   if (result != 0) {
-    g_core->Log(LogName::kBa, LogLevel::kError,
-                "Got return value " + std::to_string(result)
-                    + " on xdg-open cmd '" + cmd + "'");
+    g_core->logging->Log(LogName::kBa, LogLevel::kError,
+                         "Got return value " + std::to_string(result)
+                             + " on xdg-open cmd '" + cmd + "'");
   }
 }
 

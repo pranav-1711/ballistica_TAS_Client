@@ -382,7 +382,7 @@ class ChestWindow(bui.MainWindow):
         show_ad_button = (
             chest.unlock_tokens > 0
             and chest.ad_allow
-            and plus.have_incentivized_ad()
+            and plus.ads.have_incentivized_ad()
         )
 
         bwidth = 130
@@ -864,7 +864,7 @@ class ChestWindow(bui.MainWindow):
             bui.getsound('error').play()
             return
 
-        assert bui.app.classic is not None
+        assert bui.app.plus is not None
 
         # If we watch an ad, suppress window auto-recreates until our
         # window goes away. It is possible for ad viewing to do things
@@ -875,7 +875,7 @@ class ChestWindow(bui.MainWindow):
         self._recreate_suppress = bui.MainWindowAutoRecreateSuppress()
 
         self._action_in_flight = True
-        bui.app.classic.ads.show_ad_2(
+        bui.app.plus.ads.show_ad_2(
             'reduce_chest_wait',
             on_completion_call=bui.WeakCall(self._watch_ad_complete),
         )

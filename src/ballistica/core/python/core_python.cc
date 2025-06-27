@@ -9,6 +9,7 @@
 
 #include "ballistica/core/mgen/python_modules_monolithic.h"
 #include "ballistica/core/platform/core_platform.h"
+#include "ballistica/shared/ballistica.h"
 #include "ballistica/shared/foundation/macros.h"
 #include "ballistica/shared/python/python.h"
 #include "ballistica/shared/python/python_command.h"
@@ -32,13 +33,14 @@ static void CheckPyInitStatus(const char* where, const PyStatus& status) {
 void CorePython::InitPython() {
   assert(g_core->InMainThread());
   assert(g_buildconfig.monolithic_build());
+  assert(!monolithic_init_complete_);
 
   // Install our low level logger in our custom Python builds.
 #ifdef PY_HAVE_BALLISTICA_LOW_LEVEL_DEBUG_LOG
   Py_BallisticaLowLevelDebugLog = PythonLowLevelDebugLog_;
 #endif
 
-  // Flip on some extra runtime debugging options in debug builds.
+  // Flip on some extra runtime debugging options in our debug builds.
   // https://docs.python.org/3/library/devmode.html#devmode
   int dev_mode{g_buildconfig.debug_build()};
 
@@ -71,6 +73,51 @@ void CorePython::InitPython() {
   }
   config.dev_mode = dev_mode;
   config.optimization_level = g_buildconfig.debug_build() ? 0 : 1;
+
+  // When we run baenv.configure it will set Python's pycache_prefix to a
+  // path under our cache dir, keeping .pyc files nicely isolated from our
+  // scripts and allowing writing of opt .pyc files even for standard
+  // library modules which we likely would not have write access to do
+  // otherwise. Ideally, however this path should be set earlier, when
+  // initing Python itself, so that it covers *all* imports and not just the
+  // ones after baenv does its thing. So we attempt to do the same path
+  // calculation here that baenv will do so that the value can stay
+  // consistent for the whole run. If we don't get it right, baenv will spit
+  // out a warning that pycache_prefix is changing mid-run.
+  std::optional<std::string> pycache_prefix;
+  std::optional<std::string> cache_dir =
+      g_core->platform->GetCacheDirectoryMonolithicDefault();
+  if (!cache_dir.has_value()) {
+    // If we don't have an explicit cache dir, it is based on config-dir.
+    // Let's try to calc that.
+    std::optional<std::string> config_dir =
+        g_core->platform->GetConfigDirectoryMonolithicDefault();
+    if (!config_dir.has_value()) {
+      // If we don't have an explicit config dir, try to calc it.
+      //
+      // On unixy OSs our default config dir is '~/.ballisticakit'. So let's
+      // calc that if we have a value for $(HOME). This should actually
+      // cover all cases; non-unixy OSs should be passing config-dir in
+      // explicitly.
+      auto home = g_core->platform->GetEnv("HOME");
+      if (home.has_value() && !home->empty()) {
+        config_dir = *home + BA_DIRSLASH + ".ballisticakit";
+      }
+    }
+    // If we've calced a config-dir, we can calc cache-dir.
+    if (config_dir.has_value()) {
+      cache_dir = *config_dir + BA_DIRSLASH + "cache";
+    }
+  }
+  // If we've calced a cache-dir, we can calc pycache-dir.
+  if (cache_dir.has_value()) {
+    pycache_prefix = *cache_dir + BA_DIRSLASH + "pyc";
+  }
+
+  if (pycache_prefix.has_value()) {
+    PyConfig_SetBytesString(&config, &config.pycache_prefix,
+                            pycache_prefix->c_str());
+  }
 
   // In cases where we bundle Python, set up all paths explicitly.
   // https://docs.python.org/3/c-api/init_config.html#path-configuration
@@ -119,32 +166,33 @@ void CorePython::InitPython() {
     // to use abs paths anyway to avoid needing chdir so its a moot point.
     if (g_buildconfig.platform_windows()) {
       // On most platforms we stuff abs paths in here so things can work
-      // from wherever. However on Windows we need to be running from where
-      // this stuff lives so we pick up various .dlls that live there/etc.
-      // So let's make some clear noise if we don't seem to be there.
-      // (otherwise it leads to cryptic Python init messages about locale
-      // module not being found/etc. which is not very helpful).
+      // from wherever and we don't really care where we are. However on
+      // Windows we need to be running from where this stuff lives so we
+      // pick up various .dlls that live there/etc. So let's make some clear
+      // noise if we don't seem to be there. (otherwise it leads to cryptic
+      // Python init messages about locale module not being found/etc. which
+      // is not very helpful).
       if (!g_core->platform->FilePathExists("DLLs")
           || (!g_core->platform->FilePathExists("lib"))
           || (!g_core->platform->FilePathExists("ba_data"))) {
         FatalError(
-            "Ballistica seems to be running from the wrong "
+            "BallisticaKit seems to be running from the wrong "
             "directory; our stuff isn't here (ba_data, etc.).\nCWD is "
             + g_core->platform->GetCWD());
       }
 
       // Windows Python by default looks for Lib and DLLs dirs, along with
       // some others, but we want to be more explicit in limiting to those
-      // two. It also seems that windows Python's paths can be incorrect if
+      // two. It also seems that Windows Python's paths can be incorrect if
       // we're in strange dirs such as \\wsl$\Ubuntu-18.04\ that we get with
       // WSL build setups.
 
-      // NOTE: Python for windows actually comes with 'Lib', not 'lib', but
+      // NOTE: Python for Windows actually comes with 'Lib', not 'lib', but
       // it seems the interpreter defaults point to ./lib (as of 3.8.5).
-      // Normally this doesn't matter since windows is case-insensitive but
-      // under WSL it does.
-      // So we currently bundle the dir as 'lib' and use that in our path so
-      // that everything is happy (both with us and with python.exe).
+      // Normally this doesn't matter since Windows is case-insensitive but
+      // under WSL it does. So we currently bundle the dir as 'lib' and use
+      // that in our path so that everything is happy (both with us and with
+      // python.exe).
       PyWideStringList_Append(&config.module_search_paths,
                               Py_DecodeLocale("lib", nullptr));
       PyWideStringList_Append(&config.module_search_paths,
@@ -175,11 +223,52 @@ void CorePython::InitPython() {
     MonolithicRegisterPythonModules();
   }
 
+  // Optionally prevent .pyc creation.
+  if (g_core->core_config().dont_write_bytecode) {
+    config.write_bytecode = 0;
+  }
+
   // Init Python.
   CheckPyInitStatus("Py_InitializeFromConfig",
                     Py_InitializeFromConfig(&config));
 
   PyConfig_Clear(&config);
+
+  monolithic_init_complete_ = true;
+}
+
+void CorePython::AtExit(PyObject* call) {
+  // Currently this only works in monolithic builds.
+  BA_PRECONDITION(g_buildconfig.monolithic_build());
+  auto args = PythonRef::Stolen(Py_BuildValue("(O)", call));
+  auto result{objs().Get(ObjID::kBaEnvAtExitCall).Call(args)};
+  assert(result.exists());
+}
+
+void CorePython::FinalizePython() {
+  assert(g_core->InMainThread());
+  assert(g_buildconfig.monolithic_build());
+  assert(g_core->engine_done());
+  assert(!finalize_called_);
+  assert(monolithic_init_complete_);
+  assert(Python::HaveGIL());
+
+  finalize_called_ = true;
+
+  // Run our registered atexit calls/etc.
+  auto pre_finalize_result{objs().Get(ObjID::kBaEnvPreFinalizeCall).Call()};
+  assert(pre_finalize_result.exists() && pre_finalize_result.get() == Py_None);
+
+  auto result{Py_FinalizeEx()};
+
+  if (result != 0) {
+    // We can't use our high level logging here since Python is involved;
+    // just print to stderr and any platform logs directly to hopefully get
+    // seen.
+    std::string errmsg = "Py_FinalizeEx() errored.";
+    fprintf(stderr, "%s\n", errmsg.c_str());
+    g_core->platform->EmitPlatformLog("root", LogLevel::kError, errmsg);
+  }
 }
 
 void CorePython::EnablePythonLoggingCalls() {
@@ -248,6 +337,9 @@ void CorePython::ImportPythonObjs() {
                         *ctx.DictGetItem("import_baenv_and_run_configure"));
     objs_.StoreCallable(ObjID::kBaEnvGetConfigCall,
                         *ctx.DictGetItem("get_env_config"));
+    objs_.StoreCallable(ObjID::kBaEnvAtExitCall, *ctx.DictGetItem("atexit"));
+    objs_.StoreCallable(ObjID::kBaEnvPreFinalizeCall,
+                        *ctx.DictGetItem("pre_finalize"));
   }
 }
 
@@ -277,6 +369,7 @@ void CorePython::UpdateInternalLoggerLevels(LogLevel* log_levels) {
       {LogName::kBaApp, ObjID::kLoggerBaApp},
       {LogName::kBaAudio, ObjID::kLoggerBaAudio},
       {LogName::kBaGraphics, ObjID::kLoggerBaGraphics},
+      {LogName::kBaPerformance, ObjID::kLoggerBaPerformance},
       {LogName::kBaDisplayTime, ObjID::kLoggerBaDisplayTime},
       {LogName::kBaLifecycle, ObjID::kLoggerBaLifecycle},
       {LogName::kBaAssets, ObjID::kLoggerBaAssets},
@@ -346,8 +439,8 @@ void CorePython::VerifyPythonEnvironment() {
 void CorePython::MonolithicModeBaEnvConfigure() {
   assert(g_buildconfig.monolithic_build());
   assert(g_core);
-  g_core->Log(LogName::kBaLifecycle, LogLevel::kInfo,
-              "baenv.configure() begin");
+  g_core->logging->Log(LogName::kBaLifecycle, LogLevel::kInfo,
+                       "baenv.configure() begin");
 
   auto gil{Python::ScopedInterpreterLock()};
 
@@ -368,14 +461,15 @@ void CorePython::MonolithicModeBaEnvConfigure() {
   auto args = PythonRef::Stolen(Py_BuildValue("(s)", default_py_dir.c_str()));
   objs().Get(ObjID::kPrependSysPathCall).Call(args);
 
-  // Import and run baenv.configure() using our 'monolithic' values for all
-  // paths.
+  // Import and run baenv.configure() using our 'monolithic' default values
+  // for all paths.
   std::optional<std::string> config_dir =
       g_core->platform->GetConfigDirectoryMonolithicDefault();
-  std::optional<std::string> data_dir =
-      g_core->platform->GetDataDirectoryMonolithicDefault();
+  std::string data_dir = g_core->platform->GetDataDirectoryMonolithicDefault();
   std::optional<std::string> user_python_dir =
       g_core->platform->GetUserPythonDirectoryMonolithicDefault();
+  std::optional<std::string> cache_dir =
+      g_core->platform->GetCacheDirectoryMonolithicDefault();
 
   // clang-format off
   auto kwargs =
@@ -383,17 +477,26 @@ void CorePython::MonolithicModeBaEnvConfigure() {
       "{"
       "sO"  // config_dir
       "sO"  // data_dir
+      "sO"  // cache_dir
       "sO"  // user_python_dir
       "sO"  // contains_python_dist
+      "sO"  // strict_threads_atexit
+      "sO"  // setup_pycache_prefix
       "}",
       "config_dir",
         config_dir ? *PythonRef::FromString(*config_dir) : Py_None,
       "data_dir",
-        data_dir ? *PythonRef::FromString(*data_dir) : Py_None,
+        *PythonRef::FromString(data_dir),
+      "cache_dir",
+        cache_dir ? *PythonRef::FromString(*cache_dir) : Py_None,
       "user_python_dir",
         user_python_dir ? *PythonRef::FromString(*user_python_dir) : Py_None,
       "contains_python_dist",
-        g_buildconfig.contains_python_dist() ? Py_True : Py_False));
+        g_buildconfig.contains_python_dist() ? Py_True : Py_False,
+      "strict_threads_atexit",
+        *objs().Get(ObjID::kBaEnvAtExitCall),
+      "setup_pycache_prefix",
+        Py_True));
   // clang-format on
 
   auto result = objs()
@@ -405,7 +508,8 @@ void CorePython::MonolithicModeBaEnvConfigure() {
   if (result.ValueIsString()) {
     FatalError("Environment setup failed:\n" + result.ValueAsString());
   }
-  g_core->Log(LogName::kBaLifecycle, LogLevel::kInfo, "baenv.configure() end");
+  g_core->logging->Log(LogName::kBaLifecycle, LogLevel::kInfo,
+                       "baenv.configure() end");
 }
 
 void CorePython::LoggingCall(LogName logname, LogLevel loglevel,
@@ -460,6 +564,10 @@ void CorePython::LoggingCall(LogName logname, LogLevel loglevel,
       break;
     case LogName::kBaGraphics:
       logcallobj = ObjID::kLoggerBaGraphicsLogCall;
+      handled = true;
+      break;
+    case LogName::kBaPerformance:
+      logcallobj = ObjID::kLoggerBaPerformanceLogCall;
       handled = true;
       break;
     case LogName::kBaDisplayTime:

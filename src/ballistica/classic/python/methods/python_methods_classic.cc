@@ -16,7 +16,7 @@
 #include "ballistica/shared/foundation/exception.h"
 #include "ballistica/shared/python/python.h"
 #include "ballistica/shared/python/python_command.h"
-#include "ballistica/shared/python/python_sys.h"
+#include "ballistica/shared/python/python_macros.h"
 
 namespace ballistica::classic {
 
@@ -130,7 +130,7 @@ static auto PyValueTest(PyObject* self, PyObject* args, PyObject* keywds)
         arg, have_absolute ? &absolute : nullptr,
         have_change ? &change : nullptr, &return_val);
     if (!handled) {
-      ScreenMessage("invalid arg: " + std::string(arg));
+      g_base->ScreenMessage("invalid arg: " + std::string(arg));
     }
   }
 

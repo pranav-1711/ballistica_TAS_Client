@@ -6,9 +6,10 @@
 #include <vector>
 
 #include "ballistica/base/assets/assets.h"
-#include "ballistica/base/assets/sound_asset.h"  // IWYU pragma: keep.
+#include "ballistica/base/assets/sound_asset.h"
 #include "ballistica/base/python/base_python.h"
 #include "ballistica/base/support/context.h"
+#include "ballistica/base/ui/ui.h"
 #include "ballistica/shared/foundation/macros.h"
 #include "ballistica/ui_v1/python/class/python_class_ui_mesh.h"
 #include "ballistica/ui_v1/python/class/python_class_ui_sound.h"
@@ -39,7 +40,8 @@ static auto PyGetSound(PyObject* self, PyObject* args, PyObject* keywds)
   }
   {
     base::Assets::AssetListLock lock;
-    return PythonClassUISound::Create(g_base->assets->GetSound(name));
+    Object::Ref<base::SoundAsset> sound = g_base->assets->GetSound(name);
+    return PythonClassUISound::Create(sound.get());
   }
   Py_RETURN_NONE;
   BA_PYTHON_CATCH;
@@ -2571,8 +2573,8 @@ auto PyUIBounds(PyObject* self, PyObject* args, PyObject* keywds) -> PyObject* {
   //   x = 0.5f * kBaseVirtualResSmallX;
   //   virtual_res_y = kBaseVirtualResSmallY;
   // } else {
-  x = 0.5f * kBaseVirtualResX;
-  virtual_res_y = kBaseVirtualResY;
+  x = 0.5f * base::kBaseVirtualResX;
+  virtual_res_y = base::kBaseVirtualResY;
   // }
   float y = 0.5f * virtual_res_y;
   return Py_BuildValue("(ffff)", -x, x, -y, y);
